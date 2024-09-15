@@ -139,4 +139,9 @@ function setRectangle(gl, x, y, width, height) {
   ]), gl.STATIC_DRAW);
 }
 
+function random_square() {
+    console.log("Running the WebGL script...");
+    main();
+}
+
 main();
