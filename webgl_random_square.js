@@ -39,7 +39,7 @@ void main() {
 }
 `;
 
-function main() {
+function main(slider_value) {
   // Get A WebGL context
   var canvas = document.querySelector("#c");
   var gl = canvas.getContext("webgl2");
@@ -102,7 +102,7 @@ function main() {
   gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 
   // draw 50 random rectangles in random colors
-  for (var ii = 0; ii < 50; ++ii) {
+  for (var ii = 0; ii < slider_value; ii++) {
     // Put a rectangle in the position buffer
     setRectangle(
         gl, randomInt(300), randomInt(300), randomInt(300), randomInt(300));
@@ -139,7 +139,7 @@ function setRectangle(gl, x, y, width, height) {
   ]), gl.STATIC_DRAW);
 }
 
-function random_square() {
+function random_square(slider_value) {
     console.log("Running the WebGL script...");
-    main();
+    main(slider_value);
 }

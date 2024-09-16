@@ -11,7 +11,7 @@ body {
 #runButton {
     position: absolute;
     top: 10px;
-    right: 10px;
+    right: 55px;
     padding: 10px 20px;
     background-color: #4CAF50;
     color: white;
@@ -22,4 +22,57 @@ body {
 
 #runButton:hover {
     background-color: #45a049;
+}
+
+/* Container for the slider, positioned just below the button */
+.slidecontainer {
+    position: absolute;  /* To position it in relation to the button */
+    top: 50px;  /* Place it below the button; adjust as needed */
+    right: 10px;  /* Align it with the button */
+    width: auto;  /* Make sure the width is flexible */
+}
+
+/* Label for the slider */
+#label_square_number {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+    text-align: center;
+}
+
+/* Style for the slider */
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;  /* Full width of the container */
+    height: 10px;
+    background: #ddd;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    border-radius: 5px;
+}
+
+.slider:hover {
+    opacity: 1;
+}
+
+/* Style the slider thumb (the draggable part) */
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #4CAF50;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #4CAF50;
+    cursor: pointer;
+    border-radius: 50%;
 }
