@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 document.querySelector('#runButton').addEventListener('click', function() {
     if (typeof random_square === "function") {
