@@ -143,5 +143,3 @@ function random_square() {
     console.log("Running the WebGL script...");
     main();
 }
-
-main();
