@@ -40,103 +40,105 @@ void main() {
 `;
 
 function main(slider_value) {
-  // Get A WebGL context
-  var canvas = document.querySelector("#c");
-  var gl = canvas.getContext("webgl2");
-  if (!gl) {
-    return;
-  }
+    glMatrix.setMatrixArrayType(Array)
 
-  // Use our boilerplate utils to compile the shaders and link into a program
-  var program = webglUtils.createProgramFromSources(gl,
-      [vertexShaderSource, fragmentShaderSource]);
+    // Get A WebGL context
+    var canvas = document.querySelector("#c");
+    var gl = canvas.getContext("webgl2");
+    if (!gl) {
+        return;
+    }
 
-  // look up where the vertex data needs to go.
-  var positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+    // Use our boilerplate utils to compile the shaders and link into a program
+    var program = webglUtils.createProgramFromSources(gl,
+        [vertexShaderSource, fragmentShaderSource]);
 
-  // look up uniform locations
-  var resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
-  var colorLocation = gl.getUniformLocation(program, "u_color");
+    // look up where the vertex data needs to go.
+    var positionAttributeLocation = gl.getAttribLocation(program, "a_position");
 
-  // Create a buffer
-  var positionBuffer = gl.createBuffer();
+    // look up uniform locations
+    var resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+    var colorLocation = gl.getUniformLocation(program, "u_color");
 
-  // Create a vertex array object (attribute state)
-  var vao = gl.createVertexArray();
+    // Create a buffer
+    var positionBuffer = gl.createBuffer();
 
-  // and make it the one we're currently working with
-  gl.bindVertexArray(vao);
+    // Create a vertex array object (attribute state)
+    var vao = gl.createVertexArray();
 
-  // Turn on the attribute
-  gl.enableVertexAttribArray(positionAttributeLocation);
+    // and make it the one we're currently working with
+    gl.bindVertexArray(vao);
 
-  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Turn on the attribute
+    gl.enableVertexAttribArray(positionAttributeLocation);
 
-  // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  var size = 2;          // 2 components per iteration
-  var type = gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  var offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-      positionAttributeLocation, size, type, normalize, stride, offset);
+    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+    // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+    var size = 2;          // 2 components per iteration
+    var type = gl.FLOAT;   // the data is 32bit floats
+    var normalize = false; // don't normalize the data
+    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+    var offset = 0;        // start at the beginning of the buffer
+    gl.vertexAttribPointer(
+        positionAttributeLocation, size, type, normalize, stride, offset);
 
-  // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
 
-  // Clear the canvas
-  gl.clearColor(0, 0, 0, 0);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // Tell WebGL how to convert from clip space to pixels
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-  // Tell it to use our program (pair of shaders)
-  gl.useProgram(program);
+    // Clear the canvas
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Bind the attribute/buffer set we want.
-  gl.bindVertexArray(vao);
+    // Tell it to use our program (pair of shaders)
+    gl.useProgram(program);
 
-  // Pass in the canvas resolution so we can convert from
-  // pixels to clipspace in the shader
-  gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+    // Bind the attribute/buffer set we want.
+    gl.bindVertexArray(vao);
 
-  // draw 50 random rectangles in random colors
-  for (var ii = 0; ii < slider_value; ii++) {
-    // Put a rectangle in the position buffer
-    setRectangle(
-        gl, randomInt(300), randomInt(300), randomInt(300), randomInt(300));
+    // Pass in the canvas resolution so we can convert from
+    // pixels to clipspace in the shader
+    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 
-    // Set a random color.
-    gl.uniform4f(colorLocation, Math.random(), Math.random(), Math.random(), 1);
+    // draw 50 random rectangles in random colors
+    for (var ii = 0; ii < slider_value; ii++) {
+        // Put a rectangle in the position buffer
+        setRectangle(
+            gl, randomInt(300), randomInt(300), randomInt(300), randomInt(300));
 
-    // Draw the rectangle.
-    var primitiveType = gl.TRIANGLES;
-    var offset = 0;
-    var count = 6;
-    gl.drawArrays(primitiveType, offset, count);
-  }
+        // Set a random color.
+        gl.uniform4f(colorLocation, Math.random(), Math.random(), Math.random(), 1);
+
+        // Draw the rectangle.
+        var primitiveType = gl.TRIANGLES;
+        var offset = 0;
+        var count = 6;
+        gl.drawArrays(primitiveType, offset, count);
+    }
 }
 
 // Returns a random integer from 0 to range - 1.
 function randomInt(range) {
-  return Math.floor(Math.random() * range);
+    return Math.floor(Math.random() * range);
 }
 
 // Fill the buffer with the values that define a rectangle.
 function setRectangle(gl, x, y, width, height) {
-  var x1 = x;
-  var x2 = x + width;
-  var y1 = y;
-  var y2 = y + height;
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-     x1, y1,
-     x2, y1,
-     x1, y2,
-     x1, y2,
-     x2, y1,
-     x2, y2,
-  ]), gl.STATIC_DRAW);
+    var x1 = x;
+    var x2 = x + width;
+    var y1 = y;
+    var y2 = y + height;
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        x1, y1,
+        x2, y1,
+        x1, y2,
+        x1, y2,
+        x2, y1,
+        x2, y2,
+    ]), gl.STATIC_DRAW);
 }
 
 function random_square(slider_value) {

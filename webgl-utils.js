@@ -1,5 +1,3 @@
-"use strict";
-
 /*
  * Copyright 2021, GFXFundamentals.
  * All rights reserved.
@@ -32,72 +30,72 @@
  */
 
 /* global define */
-(function(root, factory) {  // eslint-disable-line
+(function (root, factory) {  // eslint-disable-line
     if (typeof define === 'function' && define.amd) {
-      // AMD. Register as an anonymous module.
-      define([], function() {
-        return factory.call(root);
-      });
+        // AMD. Register as an anonymous module.
+        define([], function () {
+            return factory.call(root);
+        });
     } else {
-      // Browser globals
-      root.webglUtils = factory.call(root);
+        // Browser globals
+        root.webglUtils = factory.call(root);
     }
-  }(this, function() {
+}(this, function () {
     "use strict";
-  
+
     const topWindow = this;
-  
+
     /** @module webgl-utils */
-  
+
     function isInIFrame(w) {
-      w = w || topWindow;
-      return w !== w.top;
+        w = w || topWindow;
+        return w !== w.top;
     }
-  
+
     if (!isInIFrame()) {
-      console.log("%c%s", 'color:blue;font-weight:bold;', 'for more about webgl-utils.js see:');  // eslint-disable-line
-      console.log("%c%s", 'color:blue;font-weight:bold;', 'http://webgl2fundamentals.org/webgl/lessons/webgl-boilerplate.html');  // eslint-disable-line
+        console.log("%c%s", 'color:blue;font-weight:bold;', 'for more about webgl-utils.js see:');  // eslint-disable-line
+        console.log("%c%s", 'color:blue;font-weight:bold;', 'http://webgl2fundamentals.org/webgl/lessons/webgl-boilerplate.html');  // eslint-disable-line
     }
-  
+
     /**
      * Wrapped logging function.
      * @param {string} msg The message to log.
      */
     function error(msg) {
-      if (topWindow.console) {
-        if (topWindow.console.error) {
-          topWindow.console.error(msg);
-        } else if (topWindow.console.log) {
-          topWindow.console.log(msg);
+        if (topWindow.console) {
+            if (topWindow.console.error) {
+                topWindow.console.error(msg);
+            } else if (topWindow.console.log) {
+                topWindow.console.log(msg);
+            }
         }
-      }
     }
-  
+
     const errorRE = /ERROR:\s*\d+:(\d+)/gi;
     function addLineNumbersWithError(src, log = '') {
-      // Note: Error message formats are not defined by any spec so this may or may not work.
-      const matches = [...log.matchAll(errorRE)];
-      const lineNoToErrorMap = new Map(matches.map((m, ndx) => {
-        const lineNo = parseInt(m[1]);
-        const next = matches[ndx + 1];
-        const end = next ? next.index : log.length;
-        const msg = log.substring(m.index, end);
-        return [lineNo - 1, msg];
-      }));
-      return src.split('\n').map((line, lineNo) => {
-        const err = lineNoToErrorMap.get(lineNo);
-        return `${lineNo + 1}: ${line}${err ? `\n\n^^^ ${err}` : ''}`;
-      }).join('\n');
+        // Note: Error message formats are not defined by any spec so this may or may not work.
+        const matches = [...log.matchAll(errorRE)];
+        const lineNoToErrorMap = new Map(matches.map((m, ndx) => {
+            const lineNo = parseInt(m[1]);
+            const next = matches[ndx + 1];
+            const end = next ? next.index : log.length;
+            const msg = log.substring(m.index, end);
+            return [lineNo - 1, msg];
+        }));
+        return src.split('\n').map((line, lineNo) => {
+            const err = lineNoToErrorMap.get(lineNo);
+            return `${lineNo + 1}: ${line}${err ? `\n\n^^^ ${err}` : ''}`;
+        }).join('\n');
     }
-  
-  
+
+
     /**
      * Error Callback
      * @callback ErrorCallback
      * @param {string} msg error message.
      * @memberOf module:webgl-utils
      */
-  
+
     /**
      * Loads a shader.
      * @param {WebGLRenderingContext} gl The WebGLRenderingContext to use.
@@ -107,29 +105,29 @@
      * @return {WebGLShader} The created shader.
      */
     function loadShader(gl, shaderSource, shaderType, opt_errorCallback) {
-      const errFn = opt_errorCallback || error;
-      // Create the shader object
-      const shader = gl.createShader(shaderType);
-  
-      // Load the shader source
-      gl.shaderSource(shader, shaderSource);
-  
-      // Compile the shader
-      gl.compileShader(shader);
-  
-      // Check the compile status
-      const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-      if (!compiled) {
-        // Something went wrong during compilation; get the error
-        const lastError = gl.getShaderInfoLog(shader);
-        errFn(`Error compiling shader: ${lastError}\n${addLineNumbersWithError(shaderSource, lastError)}`);
-        gl.deleteShader(shader);
-        return null;
-      }
-  
-      return shader;
+        const errFn = opt_errorCallback || error;
+        // Create the shader object
+        const shader = gl.createShader(shaderType);
+
+        // Load the shader source
+        gl.shaderSource(shader, shaderSource);
+
+        // Compile the shader
+        gl.compileShader(shader);
+
+        // Check the compile status
+        const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+        if (!compiled) {
+            // Something went wrong during compilation; get the error
+            const lastError = gl.getShaderInfoLog(shader);
+            errFn(`Error compiling shader: ${lastError}\n${addLineNumbersWithError(shaderSource, lastError)}`);
+            gl.deleteShader(shader);
+            return null;
+        }
+
+        return shader;
     }
-  
+
     /**
      * Creates a program, attaches shaders, binds attrib locations, links the
      * program and calls useProgram.
@@ -142,40 +140,39 @@
      */
     function createProgram(
         gl, shaders, opt_attribs, opt_locations, opt_errorCallback) {
-      const errFn = opt_errorCallback || error;
-      const program = gl.createProgram();
-      shaders.forEach(function(shader) {
-        gl.attachShader(program, shader);
-      });
-      if (opt_attribs) {
-        opt_attribs.forEach(function(attrib, ndx) {
-          gl.bindAttribLocation(
-              program,
-              opt_locations ? opt_locations[ndx] : ndx,
-              attrib);
+        const errFn = opt_errorCallback || error;
+        const program = gl.createProgram();
+        shaders.forEach(function (shader) {
+            gl.attachShader(program, shader);
         });
-      }
-      gl.linkProgram(program);
-  
-      // Check the link status
-      const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
-      if (!linked) {
-          // something went wrong with the link
-          const lastError = gl.getProgramInfoLog(program);
-          errFn(`Error in program linking: ${lastError}\n${
-            shaders.map(shader => {
-              const src = addLineNumbersWithError(gl.getShaderSource(shader));
-              const type = gl.getShaderParameter(shader, gl.SHADER_TYPE);
-              return `${glEnumToString(gl, type)}:\n${src}`;
+        if (opt_attribs) {
+            opt_attribs.forEach(function (attrib, ndx) {
+                gl.bindAttribLocation(
+                    program,
+                    opt_locations ? opt_locations[ndx] : ndx,
+                    attrib);
+            });
+        }
+        gl.linkProgram(program);
+
+        // Check the link status
+        const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
+        if (!linked) {
+            // something went wrong with the link
+            const lastError = gl.getProgramInfoLog(program);
+            errFn(`Error in program linking: ${lastError}\n${shaders.map(shader => {
+                const src = addLineNumbersWithError(gl.getShaderSource(shader));
+                const type = gl.getShaderParameter(shader, gl.SHADER_TYPE);
+                return `${glEnumToString(gl, type)}:\n${src}`;
             }).join('\n')
-          }`);
-  
-          gl.deleteProgram(program);
-          return null;
-      }
-      return program;
+                }`);
+
+            gl.deleteProgram(program);
+            return null;
+        }
+        return program;
     }
-  
+
     /**
      * Loads a shader from a script tag.
      * @param {WebGLRenderingContext} gl The WebGLRenderingContext to use.
@@ -187,34 +184,34 @@
      */
     function createShaderFromScript(
         gl, scriptId, opt_shaderType, opt_errorCallback) {
-      let shaderSource = "";
-      let shaderType;
-      const shaderScript = document.getElementById(scriptId);
-      if (!shaderScript) {
-        throw ("*** Error: unknown script element" + scriptId);
-      }
-      shaderSource = shaderScript.text;
-  
-      if (!opt_shaderType) {
-        if (shaderScript.type === "x-shader/x-vertex") {
-          shaderType = gl.VERTEX_SHADER;
-        } else if (shaderScript.type === "x-shader/x-fragment") {
-          shaderType = gl.FRAGMENT_SHADER;
-        } else if (shaderType !== gl.VERTEX_SHADER && shaderType !== gl.FRAGMENT_SHADER) {
-          throw ("*** Error: unknown shader type");
+        let shaderSource = "";
+        let shaderType;
+        const shaderScript = document.getElementById(scriptId);
+        if (!shaderScript) {
+            throw ("*** Error: unknown script element" + scriptId);
         }
-      }
-  
-      return loadShader(
-          gl, shaderSource, opt_shaderType ? opt_shaderType : shaderType,
-          opt_errorCallback);
+        shaderSource = shaderScript.text;
+
+        if (!opt_shaderType) {
+            if (shaderScript.type === "x-shader/x-vertex") {
+                shaderType = gl.VERTEX_SHADER;
+            } else if (shaderScript.type === "x-shader/x-fragment") {
+                shaderType = gl.FRAGMENT_SHADER;
+            } else if (shaderType !== gl.VERTEX_SHADER && shaderType !== gl.FRAGMENT_SHADER) {
+                throw ("*** Error: unknown shader type");
+            }
+        }
+
+        return loadShader(
+            gl, shaderSource, opt_shaderType ? opt_shaderType : shaderType,
+            opt_errorCallback);
     }
-  
+
     const defaultShaderType = [
-      "VERTEX_SHADER",
-      "FRAGMENT_SHADER",
+        "VERTEX_SHADER",
+        "FRAGMENT_SHADER",
     ];
-  
+
     /**
      * Creates a program from 2 script tags.
      *
@@ -232,14 +229,14 @@
      */
     function createProgramFromScripts(
         gl, shaderScriptIds, opt_attribs, opt_locations, opt_errorCallback) {
-      const shaders = [];
-      for (let ii = 0; ii < shaderScriptIds.length; ++ii) {
-        shaders.push(createShaderFromScript(
-            gl, shaderScriptIds[ii], gl[defaultShaderType[ii]], opt_errorCallback));
-      }
-      return createProgram(gl, shaders, opt_attribs, opt_locations, opt_errorCallback);
+        const shaders = [];
+        for (let ii = 0; ii < shaderScriptIds.length; ++ii) {
+            shaders.push(createShaderFromScript(
+                gl, shaderScriptIds[ii], gl[defaultShaderType[ii]], opt_errorCallback));
+        }
+        return createProgram(gl, shaders, opt_attribs, opt_locations, opt_errorCallback);
     }
-  
+
     /**
      * Creates a program from 2 sources.
      *
@@ -257,14 +254,14 @@
      */
     function createProgramFromSources(
         gl, shaderSources, opt_attribs, opt_locations, opt_errorCallback) {
-      const shaders = [];
-      for (let ii = 0; ii < shaderSources.length; ++ii) {
-        shaders.push(loadShader(
-            gl, shaderSources[ii], gl[defaultShaderType[ii]], opt_errorCallback));
-      }
-      return createProgram(gl, shaders, opt_attribs, opt_locations, opt_errorCallback);
+        const shaders = [];
+        for (let ii = 0; ii < shaderSources.length; ++ii) {
+            shaders.push(loadShader(
+                gl, shaderSources[ii], gl[defaultShaderType[ii]], opt_errorCallback));
+        }
+        return createProgram(gl, shaders, opt_attribs, opt_locations, opt_errorCallback);
     }
-  
+
     /**
      * Resize a canvas to match the size its displayed.
      * @param {HTMLCanvasElement} canvas The canvas to resize.
@@ -274,22 +271,22 @@
      * @memberOf module:webgl-utils
      */
     function resizeCanvasToDisplaySize(canvas, multiplier) {
-      multiplier = multiplier || 1;
-      const width  = canvas.clientWidth  * multiplier | 0;
-      const height = canvas.clientHeight * multiplier | 0;
-      if (canvas.width !== width ||  canvas.height !== height) {
-        canvas.width  = width;
-        canvas.height = height;
-        return true;
-      }
-      return false;
+        multiplier = multiplier || 1;
+        const width = canvas.clientWidth * multiplier | 0;
+        const height = canvas.clientHeight * multiplier | 0;
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+            return true;
+        }
+        return false;
     }
-  
+
     return {
-      createProgram: createProgram,
-      createProgramFromScripts: createProgramFromScripts,
-      createProgramFromSources: createProgramFromSources,
-      resizeCanvasToDisplaySize: resizeCanvasToDisplaySize,
+        createProgram: createProgram,
+        createProgramFromScripts: createProgramFromScripts,
+        createProgramFromSources: createProgramFromSources,
+        resizeCanvasToDisplaySize: resizeCanvasToDisplaySize,
     };
-  
-  }));
+
+}));
