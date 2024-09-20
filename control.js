@@ -12,8 +12,13 @@ slider.oninput = function () {
 
 document.querySelector('#runButton').addEventListener('click', function () {
     var sliderValue = slider.value;
-    if (typeof random_square === "function") {
-        random_square(sliderValue);
+    // if (typeof random_square === "function") {
+    //     random_square(sliderValue);
+    // } else {
+    //     console.log('The function random_square is not defined.');
+    // }
+    if (typeof SPHLoop === "function") {
+        SPHLoop(sliderValue);
     } else {
         console.log('The function random_square is not defined.');
     }

@@ -1,6 +1,8 @@
 "use strict";
 
-const G = vec2(0, -1)
+const vec2 = glMatrix.vec2;
+
+const G = vec2.fromValues(0, -10);
 const REST_DENS = 300.0;  // rest density
 const GAS_CONST = 2000.0; // const for equation of state
 const H = 16.0;           // kernel radius
@@ -20,15 +22,15 @@ const BOUND_DAMPING = -0.5;
 
 class Particle {
     constructor(x, y) {
-        this.x = vec2(x, y);
-        this.v = vec2(0, 0);
-        this.f = vec2(0, 0);
+        this.x = vec2.fromValues(x, y);
+        this.v = vec2.fromValues(0, 0);
+        this.f = vec2.fromValues(0, 0);
         this.rho = 0;
         this.p = 0;
     }
 };
 
-particles = [];
+let particles = [];
 
 
 const MAX_PARTICLES = 2500;
@@ -48,29 +50,57 @@ function InitSPH() {
             if (particles.length < DAM_PARTICLES) {
                 particles.push(Math.random());
             }
-            else{
+            else {
                 return;
             }
         }
     }
 }
 
-function ComputeDensityPressure(){
+function ComputeDensityPressure() {
 
 }
 
-function ComputeForces(){
+function ComputeForces() {
 
 }
 
-function Integrate(){
+function Integrate() {
 
 }
 
-function Update(){
+function Update() {
     ComputeDensityPressure();
     ComputeForces();
     Integrate();
 }
 
-function 
+function Render() {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);
+
+
+    // Update particle positions
+    let positions = [];
+    particles.forEach(p => {
+        positions.push(p.x[0], p.x[1]);
+    });
+
+    // Load positions into the buffer
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+
+    // Enable position attribute and specify how to pull data from buffer
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    // Draw the particles as points
+    gl.drawArrays(gl.POINTS, 0, particles.length);
+}
+
+function SPHLoop(particle_num) {
+    glMatrix.setMatrixArrayType(Array)
+
+    Update();
+    Render();
+    requestAnimationFrame(SPHLoop);
+}
