@@ -17,8 +17,8 @@ document.querySelector('#runButton').addEventListener('click', function () {
     // } else {
     //     console.log('The function webgl_random_square is not defined.');
     // }
-    if (typeof simple_SPH === "function") {
-        simple_SPH(sliderValue);
+    if (typeof simpleSPH === "function") {
+        simpleSPH(sliderValue);
     } else {
         console.log('The main function is not defined.');
     }
