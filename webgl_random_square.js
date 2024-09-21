@@ -39,9 +39,7 @@ void main() {
 }
 `;
 
-function main(slider_value) {
-    glMatrix.setMatrixArrayType(Array)
-
+function render_random_square(slider_value) {
     // Get A WebGL context
     var canvas = document.querySelector("#c");
     var gl = canvas.getContext("webgl2");
@@ -141,7 +139,7 @@ function setRectangle(gl, x, y, width, height) {
     ]), gl.STATIC_DRAW);
 }
 
-function random_square(slider_value) {
+function webgl_random_square(slider_value) {
     console.log("Running the WebGL script...");
-    main(slider_value);
+    render_random_square(slider_value);
 }

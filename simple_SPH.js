@@ -5,7 +5,7 @@ const vec2 = glMatrix.vec2;
 const G = vec2.fromValues(0, -10);
 const REST_DENS = 300.0;  // rest density
 const GAS_CONST = 2000.0; // const for equation of state
-const H = 16.0;           // kernel radius
+const H = 8.0;           // kernel radius
 const HSQ = H * H;        // radius^2 for optimization
 const MASS = 2.5;         // assume all particles have the same mass
 const VISC = 200.0;       // viscosity constant
@@ -30,25 +30,25 @@ class Particle {
     }
 };
 
-let particles = [];
-
-
 const MAX_PARTICLES = 2500;
 const DAM_PARTICLES = 500;
 const BLOCK_PARTICLES = 250;
 
 // rendering projection parameters
-const WINDOW_WIDTH = 800;
-const WINDOW_HEIGHT = 600;
-const VIEW_WIDTH = 1.5 * 800;
-const VIEW_HEIGHT = 1.5 * 600;
+const DAM_WIDTH = 800;
+const DAM_HEIGHT = 600;
 
+let particles = [];
+let gl;
+let program;
+let positionLocation;
+let resolutionUniformLocation;
 
 function InitSPH() {
-    for (var y = EPS; y < VIEW_HEIGHT - EPS; y++) {
-        for (var x = EPS; x < VIEW_WIDTH; x++) {
+    for (var y = EPS; y < DAM_HEIGHT - EPS; y += H) {
+        for (var x = EPS; x <= DAM_WIDTH; x += H) {
             if (particles.length < DAM_PARTICLES) {
-                particles.push(Math.random());
+                particles.push(new Particle(x + Math.random() / 10e3, y + Math.random() / 10e3));
             }
             else {
                 return;
@@ -79,8 +79,9 @@ function Render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(program);
 
-
+    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
     // Update particle positions
+
     let positions = [];
     particles.forEach(p => {
         positions.push(p.x[0], p.x[1]);
@@ -97,10 +98,56 @@ function Render() {
     gl.drawArrays(gl.POINTS, 0, particles.length);
 }
 
-function SPHLoop(particle_num) {
-    glMatrix.setMatrixArrayType(Array)
-
+function SPHLoop() {
     Update();
     Render();
+    requestAnimationFrame(SPHLoop);
+}
+
+function simple_SPH(particle_num) {
+    // WebGL setup
+    const canvas = document.getElementById("c");
+    gl = canvas.getContext("webgl2");
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);  // Set background color
+
+    // Initialize shaders
+    const vertexShaderSource = `#version 300 es
+    precision highp float;
+
+    in vec2 a_position;  // Particle position passed from JavaScript
+    uniform vec2 u_resolution;  // Canvas resolution for normalization
+
+    void main() {
+        // Convert particle position to clip space (-1 to 1)
+        vec2 clipSpace = (a_position / u_resolution) * 2.0 - 1.0;
+        gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+        gl_PointSize = 1.0;  // Size of each particle point
+    }`;
+
+    const fragmentShaderSource = `#version 300 es
+    precision highp float;
+
+    out vec4 outColor;
+
+    void main() {
+        outColor = vec4(0.0, 0.0, 0.6, 1.0);
+    }`;
+
+    program = webglUtils.createProgramFromSources(gl,
+        [vertexShaderSource, fragmentShaderSource]);
+
+    // Get attribute/uniform locations
+    positionLocation = gl.getAttribLocation(program, "a_position");
+    resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+
+    // Create buffer for particle positions
+    const positionBuffer = gl.createBuffer();
+
+    // Bind buffer and set it as ARRAY_BUFFER
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+
+    InitSPH();
     requestAnimationFrame(SPHLoop);
 }

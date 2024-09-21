@@ -6,20 +6,20 @@ var label = document.querySelector("#label_square_number");
 // Update the label to show the current slider value
 slider.oninput = function () {
     label.textContent = "num: " + this.value;  // Update label text dynamically
-    // random_square(this.value)
+    // webgl_random_square(this.value)
 }
 
 
 document.querySelector('#runButton').addEventListener('click', function () {
     var sliderValue = slider.value;
-    // if (typeof random_square === "function") {
-    //     random_square(sliderValue);
+    // if (typeof webgl_random_square === "function") {
+    //     webgl_random_square(sliderValue);
     // } else {
-    //     console.log('The function random_square is not defined.');
+    //     console.log('The function webgl_random_square is not defined.');
     // }
-    if (typeof SPHLoop === "function") {
-        SPHLoop(sliderValue);
+    if (typeof simple_SPH === "function") {
+        simple_SPH(sliderValue);
     } else {
-        console.log('The function random_square is not defined.');
+        console.log('The main function is not defined.');
     }
 });
