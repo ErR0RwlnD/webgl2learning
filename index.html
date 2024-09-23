@@ -3,34 +3,45 @@
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
 <!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>Simple SPH</title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="style.css">
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.2/gl-matrix-min.js"></script>
-        <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
-    </head>
-    <body>
-        <!--[if lt IE 7]>
-            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
-        <![endif]-->
-        <button id="runButton">Restart</button>
 
-        <div class="slidecontainer">
-            <label for="slider_square_number" id="label_square_number">num: 50</label>
-            <input type="range" min="1" max="100" value="50" class="slider" id="slider_square_number">
-        </div>
-        
-        <canvas id="c"></canvas>
-        
-        <script src="control.js"></script>
-        <script src="simple_SPH.js"></script>
-        <script src="webgl_random_square.js"></script>
-        
-    </body>
+
+
+<html lang="en"></html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .block {
+            padding: 20px;
+            margin: 20px;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #333;
+            cursor: pointer;
+            background-color: white;
+            transition: background-color 0.3s;
+        }
+        .block:hover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="block" onclick="location.href='random_square.html'">Random Square</div>
+    <div class="block" onclick="location.href='simple_SPH.html'">Simple SPH</div>
+</body>
 </html>
