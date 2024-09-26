@@ -5,7 +5,7 @@ const vec2 = glMatrix.vec2;
 const G = vec2.fromValues(0, -10);
 const REST_DENS = 300.0;  // rest density
 const GAS_CONST = 2000.0; // const for equation of state
-const H = 20.0;            // kernel radius
+const H = 16.0;           // kernel radius
 const HSQ = H * H;        // radius^2 for optimization
 const MASS = 2.5;         // assume all particles have the same mass
 const VISC = 200.0;       // viscosity constant
@@ -18,6 +18,12 @@ const VISC_LAP = 40.0 / (Math.PI * Math.pow(H, 5.0));
 const EPS = H; // boundary epsilon
 const BOUND_DAMPING = -0.5;
 
+const MAX_PARTICLES = 2000;
+
+// Container parameters
+const CONTAINER_WIDTH = 1000;
+const CONTAINER_HEIGHT = 1000;
+
 class Particle {
     constructor(x, y) {
         this.x = vec2.fromValues(x, y);
@@ -26,15 +32,7 @@ class Particle {
         this.rho = 0;
         this.p = 0;
     }
-};
-
-const MAX_PARTICLES = 10000;
-const DAM_PARTICLES = 1000;
-const BLOCK_PARTICLES = 250;
-
-// Container parameters
-const CONTAINER_WIDTH = 1000;
-const CONTAINER_HEIGHT = 1000;
+}
 
 let particles = [];
 let gl;
@@ -46,15 +44,16 @@ let colorUniformLocation;
 // Define the container boundaries
 const containerVertices = [
     0, 0,                          // Bottom-left corner
-    CONTAINER_WIDTH, 0,             // Bottom-right corner
+    CONTAINER_WIDTH, 0,            // Bottom-right corner
     CONTAINER_WIDTH, CONTAINER_HEIGHT,  // Top-right corner
-    0, CONTAINER_HEIGHT             // Top-left corner
+    0, CONTAINER_HEIGHT            // Top-left corner
 ];
 
-function initSPH() {
+function initSPH(numParticles) {
+    particles = []; // Clear existing particles
     for (let y = EPS; y < CONTAINER_HEIGHT - EPS; y += H) {
         for (let x = CONTAINER_WIDTH / 4; x <= CONTAINER_WIDTH / 4 * 3; x += H) {
-            if (particles.length < DAM_PARTICLES) {
+            if (particles.length < numParticles) {
                 particles.push(new Particle(x + Math.random() / 10e3, y + Math.random() / 10e3));
             } else {
                 return;
@@ -86,7 +85,7 @@ function computeDensityPressure() {
         particles.forEach(pj => {
             let rij = vec2.create();
             vec2.sub(rij, pj.x, pi.x);  // rij = pj.x - pi.x
-            let r2 = vec2.squaredLength(rij);  // r2 = rij.squaredNorm()
+            let r2 = vec2.squaredLength(rij);  // r2 = rij.squaredLength()
 
             if (r2 < HSQ) {
                 // This computation is symmetric
@@ -96,7 +95,6 @@ function computeDensityPressure() {
         pi.p = GAS_CONST * (pi.rho - REST_DENS);
     });
 }
-
 
 function computeForces() {
     particles.forEach(pi => {
@@ -108,14 +106,14 @@ function computeForces() {
 
             let rij = vec2.create();
             vec2.sub(rij, pj.x, pi.x);  // rij = pj.x - pi.x
-            let r = vec2.length(rij);   // r = rij.norm()
+            let r = vec2.length(rij);   // r = vec2.length(rij)
 
             if (r < H) {
                 // Compute pressure force contribution
                 let pressureTerm = MASS * (pi.p + pj.p) / (2 * pj.rho) * SPIKY_GRAD * Math.pow(H - r, 3);
                 let normalizedRij = vec2.create();
                 vec2.normalize(normalizedRij, rij);
-                vec2.scaleAndAdd(fpress, fpress, normalizedRij, -pressureTerm);  // fpress += -rij.normalized() * pressureTerm
+                vec2.scaleAndAdd(fpress, fpress, normalizedRij, -pressureTerm);  // fpress += -normalizedRij * pressureTerm
 
                 // Compute viscosity force contribution
                 let velocityDiff = vec2.create();
@@ -131,7 +129,6 @@ function computeForces() {
         vec2.add(pi.f, pi.f, fgrav);          // pi.f += fgrav
     });
 }
-
 
 function integrate() {
     particles.forEach(p => {
@@ -158,7 +155,6 @@ function integrate() {
         }
     });
 }
-
 
 function update() {
     computeDensityPressure();
@@ -223,7 +219,7 @@ function resizeCanvasToDisplaySize(canvas) {
     }
 }
 
-function simpleSPH() {
+function simpleSPH(numParticles) {
     // WebGL setup
     const canvas = document.getElementById("c");
     gl = canvas.getContext("webgl2");
@@ -275,11 +271,9 @@ function simpleSPH() {
     gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
 
     // Initialize particles and start rendering loop
-    initSPH();
+    initSPH(numParticles);
     requestAnimationFrame(SPHLoop);
 }
-
-"use strict";
 
 var slider = document.querySelector("#slider_square_number");
 var label = document.querySelector("#label_square_number");
@@ -298,3 +292,8 @@ document.querySelector('#runButton').addEventListener('click', function () {
     }
 });
 
+// Set the slider's max value to MAX_PARTICLES
+slider.max = MAX_PARTICLES;
+slider.min = MAX_PARTICLES / 10;
+slider.value = MAX_PARTICLES / 10;
+label.textContent = "num: " + slider.value;

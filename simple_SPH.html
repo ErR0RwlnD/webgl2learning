@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple SPH</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="simple_SPH.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.2/gl-matrix-min.js"></script>
     <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
 </head>
 <body>
-    <button id="runButton">Restart SPH Simulation</button>
-
-    <div class="slidecontainer">
-        <label for="slider_square_number" id="label_square_number">num: 50</label>
-        <input type="range" min="1" max="100" value="50" class="slider" id="slider_square_number">
+    <div class="controls">
+        <button id="runButton">Restart SPH Simulation</button>
+        <div class="slidecontainer">
+            <label for="slider_square_number" id="label_square_number">num: 1000</label>
+            <input type="range" min="1000" max="10000" value="1000" class="slider" id="slider_square_number">
+        </div>
     </div>
-    
     <canvas id="c" width="800" height="600"></canvas>
 
     <script src="simple_SPH.js"></script> <!-- This will contain your SPH simulation logic -->

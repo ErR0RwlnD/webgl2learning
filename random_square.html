@@ -4,24 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Random Square</title>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            border: 1px solid black;
-        }
-    </style>
-    <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
+    <link rel="stylesheet" href="random_square.css">
 </head>
 <body>
-    <button id="runButton">Run Random Square</button>
+    <div class="controls">
+        <button id="runButton">Random Square</button>
+        <input type="range" id="slider_square_number" min="1" max="50" value="25">
+        <label id="label_square_number">num: 25</label>
+    </div>
     <canvas id="c" width="400" height="400"></canvas>
     
-    <script src="webgl_random_square.js"></script> <!-- This will contain your random square logic -->
+    <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
+    <script src="webgl_random_square.js"></script>
 </body>
 </html>

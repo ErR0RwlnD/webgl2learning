@@ -1,0 +1,47 @@
+body {
+    margin: 0;
+    height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    position: relative;
+}
+
+.controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+button {
+    background-color: lightblue;
+    border: none;
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #add8e6;
+}
+
+.slidecontainer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+input[type="range"] {
+    margin-bottom: 10px;
+}
+
+canvas {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    border: 1px solid black;
+}
