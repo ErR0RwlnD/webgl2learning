@@ -44,4 +44,6 @@ canvas {
     top: 20px;
     left: 20px;
     border: 1px solid black;
+    height: 80vh;
+    width: 1000px; /* Ensure the canvas width is set to 1200px */
 }
