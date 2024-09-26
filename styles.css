@@ -1,0 +1,34 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1000px; /* Increased gap to ensure buttons are not connected */
+}
+
+.block {
+    padding: 20px;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #333;
+    cursor: pointer;
+    background-color: white;
+    transition: background-color 0.3s;
+    border-radius: 15px; /* Rounded corners */
+    text-align: center;
+}
+
+.block:hover {
+    background-color: #ddd;
+}

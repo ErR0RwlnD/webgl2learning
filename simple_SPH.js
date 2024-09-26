@@ -279,3 +279,22 @@ function simpleSPH() {
     requestAnimationFrame(SPHLoop);
 }
 
+"use strict";
+
+var slider = document.querySelector("#slider_square_number");
+var label = document.querySelector("#label_square_number");
+
+// Update the label to show the current slider value
+slider.oninput = function () {
+    label.textContent = "num: " + this.value;  // Update label text dynamically
+}
+
+document.querySelector('#runButton').addEventListener('click', function () {
+    var sliderValue = slider.value;
+    if (typeof simpleSPH === "function") {
+        simpleSPH(sliderValue);
+    } else {
+        console.log('The main function is not defined.');
+    }
+});
+
