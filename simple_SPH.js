@@ -6,6 +6,7 @@ const G = vec2.fromValues(0, -10);
 const REST_DENS = 300.0;  // rest density
 const GAS_CONST = 2000.0; // const for equation of state
 const H = 16.0;           // kernel radius
+const GRID_SIZE = H;    // grid cell size
 const HSQ = H * H;        // radius^2 for optimization
 const MASS = 2.5;         // assume all particles have the same mass
 const VISC = 200.0;       // viscosity constant
@@ -18,7 +19,7 @@ const VISC_LAP = 40.0 / (Math.PI * Math.pow(H, 5.0));
 const EPS = H; // boundary epsilon
 const BOUND_DAMPING = -0.5;
 
-const MAX_PARTICLES = 2000;
+const MAX_PARTICLES = 5000;
 
 // Container parameters
 const CONTAINER_WIDTH = 1000;
@@ -34,6 +35,7 @@ class Particle {
     }
 }
 
+let grid = new Map();
 let particles = [];
 let gl;
 let program;
@@ -51,10 +53,13 @@ const containerVertices = [
 
 function initSPH(numParticles) {
     particles = []; // Clear existing particles
+    grid = new Map(); // Clear the grid
     for (let y = EPS; y < CONTAINER_HEIGHT - EPS; y += H) {
         for (let x = CONTAINER_WIDTH / 4; x <= CONTAINER_WIDTH / 4 * 3; x += H) {
             if (particles.length < numParticles) {
-                particles.push(new Particle(x + Math.random() / 10e3, y + Math.random() / 10e3));
+                let particle = new Particle(x + Math.random() / 10e3, y + Math.random() / 10e3);
+                particles.push(particle);
+                addToGrid(particle);
             } else {
                 return;
             }
@@ -62,33 +67,49 @@ function initSPH(numParticles) {
     }
 }
 
-function renderContainer() {
-    // Create a buffer for the container (rectangle)
-    const containerBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, containerBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(containerVertices), gl.STATIC_DRAW);
+function getGridCell(pos) {
+    return [
+        Math.floor(pos[0] / GRID_SIZE),
+        Math.floor(pos[1] / GRID_SIZE)
+    ];
+}
 
-    // Enable and set up the position attribute for the container
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+function addToGrid(particle) {
+    const cell = getGridCell(particle.x);
+    const key = `${cell[0]},${cell[1]}`;
+    if (!grid.has(key)) {
+        grid.set(key, []);
+    }
+    grid.get(key).push(particle);
+}
 
-    // Set color to black for the container
-    gl.uniform4f(colorUniformLocation, 0.0, 0.0, 0.0, 1.0);  // Black
-
-    // Draw the container as a line loop
-    gl.drawArrays(gl.LINE_LOOP, 0, 4);  // Draw rectangle as line loop
+function findNeighbors(particle) {
+    const neighbors = [];
+    const cell = getGridCell(particle.x);
+    for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+            const key = `${cell[0] + i},${cell[1] + j}`;
+            if (grid.has(key)) {
+                neighbors.push(...grid.get(key));
+            }
+        }
+    }
+    return neighbors;
 }
 
 function computeDensityPressure() {
+    grid.clear();
+    particles.forEach(addToGrid);
+
     particles.forEach(pi => {
         pi.rho = 0;
-        particles.forEach(pj => {
-            let rij = vec2.create();
-            vec2.sub(rij, pj.x, pi.x);  // rij = pj.x - pi.x
-            let r2 = vec2.squaredLength(rij);  // r2 = rij.squaredLength()
+        const neighbors = findNeighbors(pi);
+        neighbors.forEach(pj => {
+            const rij = vec2.create();
+            vec2.sub(rij, pj.x, pi.x);
+            const r2 = vec2.squaredLength(rij);
 
             if (r2 < HSQ) {
-                // This computation is symmetric
                 pi.rho += MASS * POLY6 * Math.pow(HSQ - r2, 3);
             }
         });
@@ -98,35 +119,33 @@ function computeDensityPressure() {
 
 function computeForces() {
     particles.forEach(pi => {
-        let fpress = vec2.create();
-        let fvisc = vec2.create();
+        const fpress = vec2.create();
+        const fvisc = vec2.create();
+        const neighbors = findNeighbors(pi);
 
-        particles.forEach(pj => {
+        neighbors.forEach(pj => {
             if (pi === pj) return;
 
-            let rij = vec2.create();
-            vec2.sub(rij, pj.x, pi.x);  // rij = pj.x - pi.x
-            let r = vec2.length(rij);   // r = vec2.length(rij)
+            const rij = vec2.create();
+            vec2.sub(rij, pj.x, pi.x);
+            const r = vec2.length(rij);
 
             if (r < H) {
-                // Compute pressure force contribution
-                let pressureTerm = MASS * (pi.p + pj.p) / (2 * pj.rho) * SPIKY_GRAD * Math.pow(H - r, 3);
-                let normalizedRij = vec2.create();
+                const pressureTerm = MASS * (pi.p + pj.p) / (2 * pj.rho) * SPIKY_GRAD * Math.pow(H - r, 3);
+                const normalizedRij = vec2.create();
                 vec2.normalize(normalizedRij, rij);
-                vec2.scaleAndAdd(fpress, fpress, normalizedRij, -pressureTerm);  // fpress += -normalizedRij * pressureTerm
+                vec2.scaleAndAdd(fpress, fpress, normalizedRij, -pressureTerm);
 
-                // Compute viscosity force contribution
-                let velocityDiff = vec2.create();
+                const velocityDiff = vec2.create();
                 vec2.sub(velocityDiff, pj.v, pi.v);
                 vec2.scaleAndAdd(fvisc, fvisc, velocityDiff, VISC * MASS / pj.rho * VISC_LAP * (H - r));
             }
         });
 
-        // Add gravitational force
-        let fgrav = vec2.create();
-        vec2.scale(fgrav, G, MASS / pi.rho);  // fgrav = G * MASS / pi.rho
-        vec2.add(pi.f, fpress, fvisc);        // pi.f = fpress + fvisc
-        vec2.add(pi.f, pi.f, fgrav);          // pi.f += fgrav
+        const fgrav = vec2.create();
+        vec2.scale(fgrav, G, MASS / pi.rho);
+        vec2.add(pi.f, fpress, fvisc);
+        vec2.add(pi.f, pi.f, fgrav);
     });
 }
 
@@ -153,6 +172,9 @@ function integrate() {
             p.v[1] *= BOUND_DAMPING;
             p.x[1] = CONTAINER_HEIGHT - EPS;
         }
+
+        // Update grid
+        addToGrid(p);
     });
 }
 
@@ -181,6 +203,24 @@ function renderParticles() {
     // Draw the particles as points
     gl.drawArrays(gl.POINTS, 0, particles.length);
 }
+
+function renderContainer() {
+    // Create a buffer for the container (rectangle)
+    const containerBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, containerBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(containerVertices), gl.STATIC_DRAW);
+
+    // Enable and set up the position attribute for the container
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    // Set color to black for the container
+    gl.uniform4f(colorUniformLocation, 0.0, 0.0, 0.0, 1.0);  // Black
+
+    // Draw the container as a line loop
+    gl.drawArrays(gl.LINE_LOOP, 0, 4);  // Draw rectangle as line loop
+}
+
 
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -270,7 +310,7 @@ function simpleSPH(numParticles) {
     // Pass the canvas resolution to the shader (in device pixels)
     gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
 
-    // Initialize particles and start rendering loop
+    // Initialize particles and start loop
     initSPH(numParticles);
     requestAnimationFrame(SPHLoop);
 }
