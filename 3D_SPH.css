@@ -16,14 +16,14 @@ body {
     flex-direction: column;
     align-items: flex-end;
     padding: 10px;
-    transition: width 0.3s, height 0.3s, right 0.3s, top 0.3s;
+    z-index: 10; /* Ensure controls are above other elements */
 }
 
 .controls.expanded {
     width: 20%;
     height: 100%;
     top: 0;
-    right: 80%;
+    right: 0;
     background-color: rgba(128, 128, 128, 0.5);
     align-items: flex-start;
 }
@@ -45,7 +45,7 @@ button {
     border: none;
     padding: 10px 20px;
     margin-bottom: 10px;
-    cursor: pointer;
+    cursor: pointer; /* Ensure cursor changes to pointer */
     font-size: 16px;
     transition: background-color 0.3s;
 }
@@ -54,21 +54,26 @@ button:hover {
     background-color: #0056b3;
 }
 
-.controls:not(.expanded) #toggleButton {
+#toggleButton {
+    position: fixed; /* Keep the button fixed at the top right corner */
+    top: 20px;
+    right: 20px;
     background-color: transparent;
     color: #007bff;
     border: 1px solid #007bff;
 }
 
-.collapsed-only {
-    display: none;
-}
-
-.controls:not(.expanded) .collapsed-only {
-    display: block;
+#backButton {
+    position: fixed; /* Keep the button fixed under the toggle button */
+    top: 80px; /* Adjust this value to add gap between the buttons */
+    right: 20px;
     background-color: transparent;
     color: #007bff;
     border: 1px solid #007bff;
+}
+
+.controls.expanded #backButton {
+    display: none; /* Hide the back button when the panel is expanded */
 }
 
 canvas {
@@ -78,4 +83,5 @@ canvas {
     width: 100%;
     height: 100%;
     border: none;
+    z-index: 1; /* Ensure canvas is below controls */
 }

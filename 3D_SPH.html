@@ -5,17 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D SPH</title>
     <link rel="stylesheet" href="3D_SPH.css"> <!-- Link to the individual CSS file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.2/gl-matrix-min.js"></script>
+    <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
 </head>
 <body>
     <div class="controls">
         <button id="toggleButton">Expand</button>
-        <button id="backButton" class="collapsed-only">Back to Main Page</button>
+        <button id="backButton" class="collapsed-only">Back</button>
         <div class="panel-content">
-            <button id="runButton">Start 3D SPH Simulation</button>
+            <button id="runButton">Restart</button>
         </div>
     </div>
     <canvas id="c"></canvas>
 
-    <script src="control_3D_SPH.js"></script> <!-- Link to the individual JS file -->
+    <script src="control_3D_SPH.js"></script>
+    <script src="3D_SPH.js"></script>
 </body>
 </html>

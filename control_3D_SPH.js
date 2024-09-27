@@ -1,17 +1,19 @@
 "use strict";
 
 document.addEventListener('DOMContentLoaded', function () {
-    const runButton = document.querySelector('#runButton');
-    const toggleButton = document.querySelector('#toggleButton');
     const backButton = document.querySelector('#backButton');
+    const toggleButton = document.querySelector('#toggleButton');
+    const restartButton = document.querySelector('#runButton');
     const controls = document.querySelector('.controls');
 
-    if (runButton) {
-        runButton.addEventListener('click', function () {
-            alert('3D SPH Simulation Started');
+    // Ensure the backButton exists before adding an event listener
+    if (backButton) {
+        backButton.addEventListener('click', function () {
+            window.location.href = 'index.html'; // Navigate back to the main page
         });
     }
 
+    // Ensure the toggleButton exists before adding an event listener
     if (toggleButton) {
         toggleButton.addEventListener('click', function () {
             controls.classList.toggle('expanded');
@@ -19,20 +21,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (backButton) {
-        backButton.addEventListener('click', function () {
-            window.location.href = 'index.html'; // Navigate back to the main page
+    // Ensure the restartButton exists before adding an event listener
+    if (restartButton) {
+        restartButton.addEventListener('click', function () {
+            resetCanvas(); // Call the resetCanvas function to reinitialize the canvas
         });
     }
-
-    function resizeCanvas() {
-        const canvas = document.getElementById('c');
-        if (canvas) {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-    }
-
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); // Initial resize
 });
