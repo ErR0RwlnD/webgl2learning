@@ -23,7 +23,7 @@ const MAX_PARTICLES = 5000;
 
 // Container parameters
 const CONTAINER_WIDTH = 1000;
-const CONTAINER_HEIGHT = 1000;
+const CONTAINER_HEIGHT = 1200;
 
 class Particle {
     constructor(x, y) {
@@ -55,7 +55,7 @@ function initSPH(numParticles) {
     particles = []; // Clear existing particles
     grid = new Map(); // Clear the grid
     for (let y = EPS; y < CONTAINER_HEIGHT - EPS; y += H) {
-        for (let x = CONTAINER_WIDTH / 4; x <= CONTAINER_WIDTH / 4 * 3; x += H) {
+        for (let x = EPS; x <= CONTAINER_WIDTH / 4 * 3; x += H) {
             if (particles.length < numParticles) {
                 let particle = new Particle(x + Math.random() / 10e3, y + Math.random() / 10e3);
                 particles.push(particle);

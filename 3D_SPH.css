@@ -1,0 +1,70 @@
+body {
+    margin: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    position: relative;
+}
+
+.controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 10px;
+    transition: width 0.3s, height 0.3s, right 0.3s, top 0.3s;
+}
+
+.controls.expanded {
+    width: 20%;
+    height: 100%;
+    top: 0;
+    right: 80%;
+    background-color: rgba(128, 128, 128, 0.5);
+    align-items: flex-start;
+}
+
+.panel-content {
+    display: none;
+    width: 100%;
+}
+
+.controls.expanded .panel-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.controls:not(.expanded) #toggleButton {
+    background-color: transparent;
+    color: #007bff;
+    border: 1px solid #007bff;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
