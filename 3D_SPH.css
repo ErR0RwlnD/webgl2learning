@@ -60,6 +60,17 @@ button:hover {
     border: 1px solid #007bff;
 }
 
+.collapsed-only {
+    display: none;
+}
+
+.controls:not(.expanded) .collapsed-only {
+    display: block;
+    background-color: transparent;
+    color: #007bff;
+    border: 1px solid #007bff;
+}
+
 canvas {
     position: absolute;
     top: 0;
