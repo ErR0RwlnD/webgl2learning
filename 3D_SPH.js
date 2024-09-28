@@ -3,6 +3,8 @@
 const mat4 = glMatrix.mat4;
 
 const zoom_sensitivity = 2.0;
+const rotation_sensitivity = 0.01;
+const container_size = 2000;
 
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl2');
@@ -44,11 +46,11 @@ const programInfo = {
 };
 
 // Build all the objects we'll be drawing.
-const buffers = initBuffers(gl);
+const container_buffer = initContainerBuffers(gl);
 
 // Draw the scene repeatedly
 let then = 0;
-let zoom = -2000;
+let zoom = -4000;
 let rotation = 0;
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
@@ -57,23 +59,31 @@ function render(now) {
     now *= 0.001;  // convert to seconds
     const deltaTime = now - then;
     then = now;
-
-    drawScene(gl, programInfo, buffers, deltaTime);
+    drawSPH(gl, programInfo, container_buffer, deltaTime);
+    drawScene(gl, programInfo, container_buffer, deltaTime);
 
     requestAnimationFrame(render);
 }
-requestAnimationFrame(render);
 
-function initBuffers(gl) {
+function drawSPH(gl, programInfo, buffers, deltaTime) {
+    updateSPH(deltaTime);
+    renderSPH(gl, programInfo);
+}
+
+function renderSPH(gl, programInfo) {
+
+}
+
+function initContainerBuffers(gl) {
     const positions = [
-        -500, -500, 500,
-        500, -500, 500,
-        500, 500, 500,
-        -500, 500, 500,
-        -500, -500, -500,
-        500, -500, -500,
-        500, 500, -500,
-        -500, 500, -500,
+        -container_size / 2, -container_size / 2, container_size / 2,
+        container_size / 2, -container_size / 2, container_size / 2,
+        container_size / 2, container_size / 2, container_size / 2,
+        -container_size / 2, container_size / 2, container_size / 2,
+        -container_size / 2, -container_size / 2, -container_size / 2,
+        container_size / 2, -container_size / 2, -container_size / 2,
+        container_size / 2, container_size / 2, -container_size / 2,
+        -container_size / 2, container_size / 2, -container_size / 2,
     ];
 
     const indices = [
@@ -152,8 +162,9 @@ canvas.addEventListener('mousedown', (event) => {
 canvas.addEventListener('mousemove', (event) => {
     if (isDragging) {
         const deltaX = event.clientX - previousMousePosition.x;
-        rotation += deltaX * 0.01;
+        rotation += deltaX * rotation_sensitivity;
         previousMousePosition = { x: event.clientX, y: event.clientY };
+        drawScene(gl, programInfo, container_buffer, 0); // Redraw the scene after rotation
     }
 });
 
@@ -173,8 +184,10 @@ window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    drawScene(gl, programInfo, buffers, 0); // Redraw the scene after resizing
+    drawScene(gl, programInfo, container_buffer, 0); // Redraw the scene after resizing
 });
 
 // Initial resize to set up the canvas size and draw the initial scene
 window.dispatchEvent(new Event('resize'));
+window.initSPH();
+requestAnimationFrame(render);
