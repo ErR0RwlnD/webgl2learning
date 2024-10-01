@@ -2,9 +2,12 @@
 
 const mat4 = glMatrix.mat4;
 
+window.container_size = 2000;
+window.radius = 10;
+window.particles = [];
+
 const zoom_sensitivity = 2.0;
 const rotation_sensitivity = 0.01;
-const container_size = 2000;
 
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl2');
@@ -14,8 +17,9 @@ if (!gl) {
 }
 
 // Vertex shader program
-const vsSource = `
-    attribute vec4 aVertexPosition;
+const containerVsSource = `#version 300 es
+    precision highp float;
+    in vec4 aVertexPosition;
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
     void main(void) {
@@ -24,29 +28,80 @@ const vsSource = `
 `;
 
 // Fragment shader program
-const fsSource = `
+const containerFsSource = `#version 300 es
+    precision highp float;
+    out vec4 fragColor;
     void main(void) {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color
+        fragColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color
     }
 `;
 
 // Initialize a shader program using webgl-utils.js
-const shaderProgram = webglUtils.createProgramFromSources(gl, [vsSource, fsSource]);
+// Load shader sources from external files
+async function initShaders() {
+    const particleVsSource = await fetch('particle.vert').then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to load particle.vert: ${response.statusText}`);
+        }
+        return response.text();
+    });
+    const particleFsSource = await fetch('particle.frag').then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to load particle.frag: ${response.statusText}`);
+        }
+        return response.text();
+    });
 
-// Collect all the info needed to use the shader program.
-const programInfo = {
-    program: shaderProgram,
-    attribLocations: {
-        vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-    },
-    uniformLocations: {
-        projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-        modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-    },
-};
+    // Initialize shader programs
+    const particleShaderProgram = webglUtils.createProgramFromSources(gl, [particleVsSource, particleFsSource]);
+    if (!particleShaderProgram) {
+        console.error('Failed to initialize particle shader program');
+    }
 
-// Build all the objects we'll be drawing.
-const container_buffer = initContainerBuffers(gl);
+    const containerShaderProgram = webglUtils.createProgramFromSources(gl, [containerVsSource, containerFsSource]);
+    if (!containerShaderProgram) {
+        console.error('Failed to initialize container shader program');
+    }
+
+
+    return { particleShaderProgram, containerShaderProgram };
+}
+
+let containerProgramInfo;
+let particleProgramInfo;
+let container_buffer;
+
+initShaders().then(({ particleShaderProgram, containerShaderProgram }) => {
+    // Collect all the info needed to use the shader program.
+    particleProgramInfo = {
+        program: particleShaderProgram,
+        attribLocations: {
+            vertexPosition: gl.getAttribLocation(particleShaderProgram, 'aVertexPosition'),
+        },
+        uniformLocations: {
+            projectionMatrix: gl.getUniformLocation(particleShaderProgram, 'uProjectionMatrix'),
+            modelViewMatrix: gl.getUniformLocation(particleShaderProgram, 'uModelViewMatrix'),
+        },
+    };
+
+    containerProgramInfo = {
+        program: containerShaderProgram,
+        attribLocations: {
+            vertexPosition: gl.getAttribLocation(containerShaderProgram, 'aVertexPosition'),
+        },
+        uniformLocations: {
+            projectionMatrix: gl.getUniformLocation(containerShaderProgram, 'uProjectionMatrix'),
+            modelViewMatrix: gl.getUniformLocation(containerShaderProgram, 'uModelViewMatrix'),
+        },
+    };
+    // Build all the objects we'll be drawing.
+    container_buffer = initContainerBuffers(gl);
+
+    // Initial resize to set up the canvas size and draw the initial scene
+    window.dispatchEvent(new Event('resize'));
+    window.initSPH();
+    requestAnimationFrame(render);
+});
 
 // Draw the scene repeatedly
 let then = 0;
@@ -59,31 +114,58 @@ function render(now) {
     now *= 0.001;  // convert to seconds
     const deltaTime = now - then;
     then = now;
-    drawSPH(gl, programInfo, container_buffer, deltaTime);
-    drawScene(gl, programInfo, container_buffer, deltaTime);
+
+    const fieldOfView = 45 * Math.PI / 180;   // in radians
+    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const zNear = 0.1;
+    const zFar = 10000.0;
+    const projectionMatrix = mat4.create();
+    mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
+    const modelViewMatrix = mat4.create();
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, zoom]);
+    mat4.rotate(modelViewMatrix, modelViewMatrix, rotation, [0, 1, 0]);
+
+    drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix);
+    drawScene(gl, containerProgramInfo, container_buffer, projectionMatrix, modelViewMatrix);
 
     requestAnimationFrame(render);
 }
 
-function drawSPH(gl, programInfo, buffers, deltaTime) {
+function drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix) {
     updateSPH(deltaTime);
-    renderSPH(gl, programInfo);
+    renderSPH(gl, projectionMatrix, modelViewMatrix);
 }
 
-function renderSPH(gl, programInfo) {
+function renderSPH(gl, projectionMatrix, modelViewMatrix) {
+    const particlePositions = window.particles.flatMap(p => [p.position.x, p.position.y, p.position.z]);
 
+    const particleBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(particlePositions), gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
+    gl.vertexAttribPointer(particleProgramInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(particleProgramInfo.attribLocations.vertexPosition);
+
+    gl.useProgram(particleProgramInfo.program);
+
+    gl.uniformMatrix4fv(particleProgramInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+    gl.uniformMatrix4fv(particleProgramInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+
+    gl.drawArrays(gl.POINTS, 0, window.particles.length);
 }
 
 function initContainerBuffers(gl) {
     const positions = [
-        -container_size / 2, -container_size / 2, container_size / 2,
-        container_size / 2, -container_size / 2, container_size / 2,
-        container_size / 2, container_size / 2, container_size / 2,
-        -container_size / 2, container_size / 2, container_size / 2,
-        -container_size / 2, -container_size / 2, -container_size / 2,
-        container_size / 2, -container_size / 2, -container_size / 2,
-        container_size / 2, container_size / 2, -container_size / 2,
-        -container_size / 2, container_size / 2, -container_size / 2,
+        -window.container_size / 2, -window.container_size / 2, window.container_size / 2,
+        window.container_size / 2, -window.container_size / 2, window.container_size / 2,
+        window.container_size / 2, window.container_size / 2, window.container_size / 2,
+        -window.container_size / 2, window.container_size / 2, window.container_size / 2,
+        -window.container_size / 2, -window.container_size / 2, -window.container_size / 2,
+        window.container_size / 2, -window.container_size / 2, -window.container_size / 2,
+        window.container_size / 2, window.container_size / 2, -window.container_size / 2,
+        -window.container_size / 2, window.container_size / 2, -window.container_size / 2,
     ];
 
     const indices = [
@@ -106,26 +188,13 @@ function initContainerBuffers(gl) {
     };
 }
 
-function drawScene(gl, programInfo, buffers, deltaTime) {
+function drawScene(gl, programInfo, buffers, projectionMatrix, modelViewMatrix) {
     gl.clearColor(1.0, 1.0, 1.0, 1.0);  // Clear to white, fully opaque
     gl.clearDepth(1.0);                 // Clear everything
     gl.enable(gl.DEPTH_TEST);           // Enable depth testing
     gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    const fieldOfView = 45 * Math.PI / 180;   // in radians
-    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    const zNear = 0.1;
-    const zFar = 10000.0;
-    const projectionMatrix = mat4.create();
-
-    mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-
-    const modelViewMatrix = mat4.create();
-
-    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, zoom]);
-    mat4.rotate(modelViewMatrix, modelViewMatrix, rotation, [0, 1, 0]);
 
     {
         const numComponents = 3;
@@ -164,7 +233,6 @@ canvas.addEventListener('mousemove', (event) => {
         const deltaX = event.clientX - previousMousePosition.x;
         rotation += deltaX * rotation_sensitivity;
         previousMousePosition = { x: event.clientX, y: event.clientY };
-        drawScene(gl, programInfo, container_buffer, 0); // Redraw the scene after rotation
     }
 });
 
@@ -177,17 +245,11 @@ canvas.addEventListener('mouseout', () => {
 });
 
 canvas.addEventListener('wheel', (event) => {
-    zoom += event.deltaY * zoom_sensitivity;
+    zoom -= event.deltaY * zoom_sensitivity;
 });
 
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    drawScene(gl, programInfo, container_buffer, 0); // Redraw the scene after resizing
 });
-
-// Initial resize to set up the canvas size and draw the initial scene
-window.dispatchEvent(new Event('resize'));
-window.initSPH();
-requestAnimationFrame(render);

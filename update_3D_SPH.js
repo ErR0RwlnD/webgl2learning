@@ -1,15 +1,38 @@
 "use strict";
 // update_3D_SPH.js
 
-window.particles = [];
 
-/**
- * Initialize the SPH (Smoothed Particle Hydrodynamics) simulation.
- * 
- */
-function initSPH() {
 
+class Particle {
+    constructor(x, y, z, radius) {
+        this.position = { x, y, z };
+        this.velocity = { x: 0, y: 0, z: 0 };
+        this.density = 0;
+        this.pressure = 0;
+    }
 }
+
+function initSPH() {
+    const width = window.container_size / 2;
+    const height = window.container_size / 4;
+    const length = window.container_size;
+    const startX = (window.container_size - width) / 2;
+    const startY = window.container_size - height;
+    const startZ = (window.container_size - length) / 2;
+
+    for (let x = startX; x < startX + width; x += window.radius * 2) {
+        for (let y = startY; y < startY + height; y += window.radius * 2) {
+            for (let z = startZ; z < startZ + length; z += window.radius * 2) {
+                const particle = new Particle(x, y, z, window.radius);
+                particle.position.x = x - window.container_size / 2;
+                particle.position.y = y - window.container_size / 2;
+                particle.position.z = z - window.container_size / 2;
+                window.particles.push(particle);
+            }
+        }
+    }
+}
+
 
 /**
  * Function to update the SPH (Smoothed Particle Hydrodynamics) simulation.
