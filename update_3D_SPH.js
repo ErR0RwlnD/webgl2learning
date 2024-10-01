@@ -1,7 +1,4 @@
 "use strict";
-// update_3D_SPH.js
-
-
 
 class Particle {
     constructor(x, y, z, radius) {

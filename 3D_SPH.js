@@ -126,8 +126,15 @@ function render(now) {
     mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, zoom]);
     mat4.rotate(modelViewMatrix, modelViewMatrix, rotation, [0, 1, 0]);
 
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);  // Clear to white, fully opaque
+    gl.clearDepth(1.0);                 // Clear everything
+    gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+    gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix);
-    drawScene(gl, containerProgramInfo, container_buffer, projectionMatrix, modelViewMatrix);
+    drawScene(gl, container_buffer, projectionMatrix, modelViewMatrix);
 
     requestAnimationFrame(render);
 }
@@ -188,13 +195,8 @@ function initContainerBuffers(gl) {
     };
 }
 
-function drawScene(gl, programInfo, buffers, projectionMatrix, modelViewMatrix) {
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);  // Clear to white, fully opaque
-    gl.clearDepth(1.0);                 // Clear everything
-    gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-    gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+function drawScene(gl, buffers, projectionMatrix, modelViewMatrix) {
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     {
         const numComponents = 3;
@@ -203,23 +205,23 @@ function drawScene(gl, programInfo, buffers, projectionMatrix, modelViewMatrix) 
         const stride = 0;
         const offset = 0;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, numComponents, type, normalize, stride, offset);
-        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+        gl.vertexAttribPointer(containerProgramInfo.attribLocations.vertexPosition, numComponents, type, normalize, stride, offset);
+        gl.enableVertexAttribArray(containerProgramInfo.attribLocations.vertexPosition);
     }
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
-    gl.useProgram(programInfo.program);
+    gl.useProgram(containerProgramInfo.program);
 
-    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
-    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+    gl.uniformMatrix4fv(containerProgramInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+    gl.uniformMatrix4fv(containerProgramInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
 
-    {
-        const vertexCount = 24;
-        const type = gl.UNSIGNED_SHORT;
-        const offset = 0;
-        gl.drawElements(gl.LINES, vertexCount, type, offset);
-    }
+
+    const vertexCount = 24;
+    const type = gl.UNSIGNED_SHORT;
+    const offset = 0;
+    gl.drawElements(gl.LINES, vertexCount, type, offset);
+
 }
 
 // Event listeners for interaction
