@@ -69,7 +69,8 @@ async function initShaders() {
 
 let containerProgramInfo;
 let particleProgramInfo;
-let container_buffer;
+let containerBuffer;
+let particleBuffer;
 
 initShaders().then(({ particleShaderProgram, containerShaderProgram }) => {
     // Collect all the info needed to use the shader program.
@@ -95,7 +96,9 @@ initShaders().then(({ particleShaderProgram, containerShaderProgram }) => {
         },
     };
     // Build all the objects we'll be drawing.
-    container_buffer = initContainerBuffers(gl);
+    particleBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
+    containerBuffer = initContainerBuffers(gl);
 
     // Initial resize to set up the canvas size and draw the initial scene
     window.dispatchEvent(new Event('resize'));
@@ -134,7 +137,7 @@ function render(now) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix);
-    drawScene(gl, container_buffer, projectionMatrix, modelViewMatrix);
+    drawScene(gl, projectionMatrix, modelViewMatrix);
 
     requestAnimationFrame(render);
 }
@@ -147,15 +150,12 @@ function drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix) {
 function renderSPH(gl, projectionMatrix, modelViewMatrix) {
     const particlePositions = window.particles.flatMap(p => [p.position.x, p.position.y, p.position.z]);
 
-    const particleBuffer = gl.createBuffer();
+    gl.useProgram(particleProgramInfo.program);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(particlePositions), gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
     gl.vertexAttribPointer(particleProgramInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(particleProgramInfo.attribLocations.vertexPosition);
-
-    gl.useProgram(particleProgramInfo.program);
 
     gl.uniformMatrix4fv(particleProgramInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
     gl.uniformMatrix4fv(particleProgramInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
@@ -195,32 +195,17 @@ function initContainerBuffers(gl) {
     };
 }
 
-function drawScene(gl, buffers, projectionMatrix, modelViewMatrix) {
-
-
-    {
-        const numComponents = 3;
-        const type = gl.FLOAT;
-        const normalize = false;
-        const stride = 0;
-        const offset = 0;
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-        gl.vertexAttribPointer(containerProgramInfo.attribLocations.vertexPosition, numComponents, type, normalize, stride, offset);
-        gl.enableVertexAttribArray(containerProgramInfo.attribLocations.vertexPosition);
-    }
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
+function drawScene(gl, projectionMatrix, modelViewMatrix) {
     gl.useProgram(containerProgramInfo.program);
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, containerBuffer.position);
+    gl.vertexAttribPointer(containerProgramInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(containerProgramInfo.attribLocations.vertexPosition);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, containerBuffer.indices);
     gl.uniformMatrix4fv(containerProgramInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
     gl.uniformMatrix4fv(containerProgramInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
 
-
-    const vertexCount = 24;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.LINES, vertexCount, type, offset);
+    gl.drawElements(gl.LINES, 24, gl.UNSIGNED_SHORT, 0);
 
 }
 
