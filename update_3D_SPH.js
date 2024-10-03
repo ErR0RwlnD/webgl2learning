@@ -36,7 +36,6 @@ function initSPH() {
  * This is a framework and does not perform any actual updates.
  * 
  * @param {number} deltaTime - Time step for the update.
- * @returns {Array} Updated particles.
  */
 function updateSPH(deltaTime) {
     // Step 1: Compute densities and pressures
@@ -48,7 +47,6 @@ function updateSPH(deltaTime) {
     // Step 3: Integrate
     integrate(particles, deltaTime);
 
-    return particles;
 }
 
 /**
