@@ -9,6 +9,41 @@ class Particle {
     }
 }
 
+let grid = new Map();
+
+function getGridCell(pos) {
+    return [
+        Math.floor(pos.x / window.grid_size),
+        Math.floor(pos.y / window.grid_size),
+        Math.floor(pos.z / window.grid_size)
+    ];
+}
+
+function addToGrid(particle) {
+    const cell = getGridCell(particle.position);
+    const key = `${cell[0]},${cell[1]},${cell[2]}`;
+    if (!grid.has(key)) {
+        grid.set(key, []);
+    }
+    grid.get(key).push(particle);
+}
+
+function findNeighbors(particle) {
+    const neighbors = [];
+    const cell = getGridCell(particle.position);
+    for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+            for (let k = -1; k <= 1; k++) {
+                const key = `${cell[0] + i},${cell[1] + j},${cell[2] + k}`;
+                if (grid.has(key)) {
+                    neighbors.push(...grid.get(key));
+                }
+            }
+        }
+    }
+    return neighbors;
+}
+
 function initSPH() {
     const width = window.container_size / 2;
     const height = window.container_size / 4;
@@ -16,6 +51,9 @@ function initSPH() {
     const startX = (window.container_size - width) / 2;
     const startY = window.container_size - height;
     const startZ = (window.container_size - length) / 2;
+
+    window.particles = []; // Clear existing particles
+    grid = new Map(); // Clear the grid
 
     for (let x = startX; x < startX + width; x += window.radius * 2) {
         for (let y = startY; y < startY + height; y += window.radius * 2) {
@@ -25,6 +63,7 @@ function initSPH() {
                 particle.position.y = y - window.container_size / 2;
                 particle.position.z = z - window.container_size / 2;
                 window.particles.push(particle);
+                addToGrid(particle);
             }
         }
     }
