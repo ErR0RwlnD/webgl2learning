@@ -3,7 +3,6 @@
 const mat4 = glMatrix.mat4;
 
 window.container_size = 2000;
-window.radius = 10;
 window.particles = [];
 
 const zoom_sensitivity = 2.0;
@@ -138,7 +137,7 @@ function render(now) {
 
     drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix);
     drawScene(gl, projectionMatrix, modelViewMatrix);
-
+    
     requestAnimationFrame(render);
 }
 

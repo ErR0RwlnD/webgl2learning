@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,12 +9,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.2/gl-matrix-min.js"></script>
     <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
 </head>
+
 <body>
     <div class="controls">
         <button id="toggleButton">Expand</button>
         <button id="backButton" class="collapsed-only">Back</button>
         <div class="panel-content">
-            <button id="runButton">Restart</button>
+            <div class="button-row">
+                <button id="reset">Reset</button>
+                <button id="start">Start</button>
+            </div>
+            <div class="slider-row">
+                <label for="slider1">Slider 1:</label>
+                <input type="range" id="slider1" name="slider1" min="0" max="100" value="50">
+            </div>
+            <div class="slider-row">
+                <label for="slider2">Slider 2:</label>
+                <input type="range" id="slider2" name="slider2" min="0" max="100" value="50">
+            </div>
         </div>
     </div>
     <canvas id="c"></canvas>
@@ -22,4 +35,5 @@
     <script src="control_3D_SPH.js"></script>
     <script src="3D_SPH.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 "use strict";
 
+let grid = new Map();
 class Particle {
     constructor(x, y, z, radius) {
         this.position = { x, y, z };
@@ -8,8 +9,6 @@ class Particle {
         this.pressure = 0;
     }
 }
-
-let grid = new Map();
 
 function getGridCell(pos) {
     return [

@@ -16,7 +16,8 @@ body {
     flex-direction: column;
     align-items: flex-end;
     padding: 10px;
-    z-index: 10; /* Ensure controls are above other elements */
+    z-index: 10;
+    /* Ensure controls are above other elements */
 }
 
 .controls.expanded {
@@ -37,6 +38,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    margin-top: calc(20px + var(--toggle-button-height));
 }
 
 button {
@@ -45,7 +47,8 @@ button {
     border: none;
     padding: 10px 20px;
     margin-bottom: 10px;
-    cursor: pointer; /* Ensure cursor changes to pointer */
+    cursor: pointer;
+    /* Ensure cursor changes to pointer */
     font-size: 16px;
     transition: background-color 0.3s;
 }
@@ -54,18 +57,11 @@ button:hover {
     background-color: #0056b3;
 }
 
-#toggleButton {
-    position: fixed; /* Keep the button fixed at the top right corner */
-    top: 20px;
-    right: 20px;
-    background-color: transparent;
-    color: #007bff;
-    border: 1px solid #007bff;
-}
-
 #backButton {
-    position: fixed; /* Keep the button fixed under the toggle button */
-    top: 80px; /* Adjust this value to add gap between the buttons */
+    position: fixed;
+    /* Keep the button fixed under the toggle button */
+    top: 80px;
+    /* Adjust this value to add gap between the buttons */
     right: 20px;
     background-color: transparent;
     color: #007bff;
@@ -73,7 +69,8 @@ button:hover {
 }
 
 .controls.expanded #backButton {
-    display: none; /* Hide the back button when the panel is expanded */
+    display: none;
+    /* Hide the back button when the panel is expanded */
 }
 
 canvas {
@@ -83,5 +80,37 @@ canvas {
     width: 100%;
     height: 100%;
     border: none;
-    z-index: 1; /* Ensure canvas is below controls */
+    z-index: 1;
+    /* Ensure canvas is below controls */
+}
+
+#toggleButton {
+    --toggle-button-height: 40px; /* Define the height variable */
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: transparent;
+    color: #007bff;
+    border: 1px solid #007bff;
+    height: var(--toggle-button-height); /* Use the variable for height */
+}
+
+.controls.expanded .panel-content {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-top: calc(20px + var(--toggle-button-height));
+}
+
+.controls.expanded .panel-content .button-row {
+    display: flex;
+    gap: 10px; /* Adjust the gap between buttons */
+    margin-bottom: 10px;
+}
+
+.controls.expanded .panel-content .slider-row {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 10px;
 }

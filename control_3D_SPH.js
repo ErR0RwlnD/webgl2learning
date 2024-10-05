@@ -1,5 +1,8 @@
 "use strict";
 
+window.radius = 10;
+window.particle_distance = 2;
+
 document.addEventListener('DOMContentLoaded', function () {
     const backButton = document.querySelector('#backButton');
     const toggleButton = document.querySelector('#toggleButton');
