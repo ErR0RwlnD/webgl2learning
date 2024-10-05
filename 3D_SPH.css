@@ -38,7 +38,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    margin-top: calc(20px + var(--toggle-button-height));
+    margin-top: auto;
 }
 
 button {
@@ -84,8 +84,11 @@ canvas {
     /* Ensure canvas is below controls */
 }
 
+:root {
+    --toggle-button-height: 40px; /* Define the height variable globally */
+}
+
 #toggleButton {
-    --toggle-button-height: 40px; /* Define the height variable */
     position: fixed;
     top: 20px;
     right: 20px;
@@ -93,13 +96,6 @@ canvas {
     color: #007bff;
     border: 1px solid #007bff;
     height: var(--toggle-button-height); /* Use the variable for height */
-}
-
-.controls.expanded .panel-content {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    margin-top: calc(20px + var(--toggle-button-height));
 }
 
 .controls.expanded .panel-content .button-row {

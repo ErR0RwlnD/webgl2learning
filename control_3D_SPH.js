@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const toggleButton = document.querySelector('#toggleButton');
     const restartButton = document.querySelector('#runButton');
     const controls = document.querySelector('.controls');
+    const resetButton = document.querySelector('#reset');
 
     // Ensure the backButton exists before adding an event listener
     if (backButton) {
@@ -28,6 +29,21 @@ document.addEventListener('DOMContentLoaded', function () {
     if (restartButton) {
         restartButton.addEventListener('click', function () {
             resetCanvas(); // Call the resetCanvas function to reinitialize the canvas
+        });
+    }
+    
+    if (resetButton) {
+        resetButton.addEventListener('click', function () {
+            // Reset particles
+            window.particles = [];
+            window.initSPH();
+
+            // Reset camera
+            zoom = -4000;
+            rotation = 0;
+
+            // Redraw the scene
+            requestAnimationFrame(render);
         });
     }
 });
