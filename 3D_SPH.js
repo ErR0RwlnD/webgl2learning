@@ -5,8 +5,10 @@ const mat4 = glMatrix.mat4;
 window.container_size = 2000;
 window.particles = [];
 
-const zoom_sensitivity = 2.0;
+const zoom_sensitivity = 2.5;
 const rotation_sensitivity = 0.01;
+const movement_sensitivity = 2.0;
+const deadzone = 3.0;
 
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl2');
@@ -110,6 +112,7 @@ let then = 0;
 let zoom = -4000;
 let rotation = 0;
 let isDragging = false;
+let verticalPosition = 0;
 let previousMousePosition = { x: 0, y: 0 };
 
 function render(now) {
@@ -125,7 +128,7 @@ function render(now) {
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
     const modelViewMatrix = mat4.create();
-    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, zoom]);
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, verticalPosition, zoom]);
     mat4.rotate(modelViewMatrix, modelViewMatrix, rotation, [0, 1, 0]);
 
     gl.clearColor(1.0, 1.0, 1.0, 1.0);  // Clear to white, fully opaque
@@ -137,7 +140,7 @@ function render(now) {
 
     drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix);
     drawScene(gl, projectionMatrix, modelViewMatrix);
-    
+
     requestAnimationFrame(render);
 }
 
@@ -208,7 +211,7 @@ function drawScene(gl, projectionMatrix, modelViewMatrix) {
 
 }
 
-// Event listeners for interaction
+// Event listeners for camera interaction
 canvas.addEventListener('mousedown', (event) => {
     isDragging = true;
     previousMousePosition = { x: event.clientX, y: event.clientY };
@@ -217,7 +220,14 @@ canvas.addEventListener('mousedown', (event) => {
 canvas.addEventListener('mousemove', (event) => {
     if (isDragging) {
         const deltaX = event.clientX - previousMousePosition.x;
-        rotation += deltaX * rotation_sensitivity;
+        const deltaY = event.clientY - previousMousePosition.y;
+
+        if ((Math.abs(deltaY) + 1e-6) / (Math.abs(deltaX) + 1e-6) > deadzone) {
+            verticalPosition -= deltaY * movement_sensitivity;
+        } else if ((Math.abs(deltaX) + 1e-6) / (Math.abs(deltaY) + 1e-6) > deadzone) {
+            rotation += deltaX * rotation_sensitivity;
+        }
+
         previousMousePosition = { x: event.clientX, y: event.clientY };
     }
 });
