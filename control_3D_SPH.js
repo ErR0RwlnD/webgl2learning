@@ -1,7 +1,7 @@
 "use strict";
 
-window.radius = 10;
-window.particle_distance = 2;
+window.radius = 40;
+window.particle_distance = 20;
 
 document.addEventListener('DOMContentLoaded', function () {
     const backButton = document.querySelector('#backButton');
@@ -31,12 +31,14 @@ document.addEventListener('DOMContentLoaded', function () {
             resetCanvas(); // Call the resetCanvas function to reinitialize the canvas
         });
     }
-    
+
     if (resetButton) {
         resetButton.addEventListener('click', function () {
             // Reset particles
             window.particles = [];
             window.initSPH();
+            updateKernelRadiusRange();
+            updateParticleCount();
 
             // Reset camera
             zoom = -4000;
@@ -44,6 +46,43 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Redraw the scene
             requestAnimationFrame(render);
+        });
+    }
+
+    const kernelRadiusSlider = document.querySelector('#kernel_radius');
+    const particleSizeSlider = document.querySelector('#particle_size');
+    const kernelRadiusValue = document.querySelector('#kernel_radius_value');
+    const particleSizeValue = document.querySelector('#particle_size_value');
+    const particleCount = document.querySelector('#particle_count');
+
+    function updateKernelRadiusRange() {
+        if (kernelRadiusSlider) {
+            kernelRadiusSlider.min = Math.ceil(1.5 * window.particle_distance).toString();
+            kernelRadiusSlider.max = (10 * window.particle_distance).toString();
+            kernelRadiusSlider.value = window.radius.toString();
+            kernelRadiusValue.textContent = kernelRadiusSlider.value;
+        }
+    }
+
+    function updateParticleCount() {
+        if (particleCount) {
+            particleCount.textContent = `Current Particles: ${window.particles.length}`;
+        }
+    }
+
+    if (kernelRadiusSlider) {
+        kernelRadiusSlider.addEventListener('input', function () {
+            window.radius = parseFloat(this.value);
+            kernelRadiusValue.textContent = this.value;
+        });
+    }
+
+    if (particleSizeSlider) {
+        particleSizeSlider.addEventListener('input', function () {
+            window.particle_distance = parseFloat(this.value);
+            particleSizeValue.textContent = this.value;
+            updateKernelRadiusRange();
+            updateParticleCount();
         });
     }
 });

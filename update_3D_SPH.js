@@ -12,9 +12,9 @@ class Particle {
 
 function getGridCell(pos) {
     return [
-        Math.floor(pos.x / window.grid_size),
-        Math.floor(pos.y / window.grid_size),
-        Math.floor(pos.z / window.grid_size)
+        Math.floor(pos.x / window.radius),
+        Math.floor(pos.y / window.radius),
+        Math.floor(pos.z / window.radius)
     ];
 }
 
@@ -54,10 +54,10 @@ function initSPH() {
     window.particles = []; // Clear existing particles
     grid = new Map(); // Clear the grid
 
-    for (let x = startX; x < startX + width; x += window.radius * 2) {
-        for (let y = startY; y < startY + height; y += window.radius * 2) {
-            for (let z = startZ; z < startZ + length; z += window.radius * 2) {
-                const particle = new Particle(x, y, z, window.radius);
+    for (let x = startX; x < startX + width; x += window.particle_distance * 2) {
+        for (let y = startY; y < startY + height; y += window.particle_distance * 2) {
+            for (let z = startZ; z < startZ + length; z += window.particle_distance * 2) {
+                const particle = new Particle(x, y, z, window.particle_distance);
                 particle.position.x = x - window.container_size / 2;
                 particle.position.y = y - window.container_size / 2;
                 particle.position.z = z - window.container_size / 2;
