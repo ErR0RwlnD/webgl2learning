@@ -4,6 +4,7 @@ const mat4 = glMatrix.mat4;
 
 window.container_size = 2000;
 window.particles = [];
+window.boundary = [];
 
 const zoom_sensitivity = 2.5;
 const rotation_sensitivity = 0.01;

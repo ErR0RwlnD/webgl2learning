@@ -1,6 +1,10 @@
 "use strict";
 
+const PI = Math.PI;
+
 let grid = new Map();
+
+
 class Particle {
     constructor(x, y, z, radius) {
         this.position = { x, y, z };
@@ -68,6 +72,25 @@ function initSPH() {
     }
 }
 
+/**
+ * Cubic spline kernel function.
+ * 
+ * @param {number} r - Distance between particles.
+ * @param {number} h - Smoothing length.
+ * @returns {number} - Kernel value.
+ */
+function cubicSplineKernel(r, h) {
+    const q = r / h;
+    const alpha = 8 / (PI * Math.pow(h, 3));
+
+    if (q >= 0 && q <= 0.5) {
+        return alpha * 6 * (Math.pow(q, 3) - Math.pow(q, 2) + 1);
+    } else {
+        return alpha * 2 * Math.pow(1 - q, 3);
+    }
+}
+
+
 
 /**
  * Function to update the SPH (Smoothed Particle Hydrodynamics) simulation.
@@ -76,50 +99,53 @@ function initSPH() {
  * @param {number} deltaTime - Time step for the update.
  */
 function updateSPH(deltaTime) {
-    // Step 1: Compute densities and pressures
-    computeDensitiesAndPressures(particles);
+    // Step 1: Compute densities
+    computeDensities();
 
-    // Step 2: Compute forces
-    computeForces(particles);
+    // Step 2: Compute pressures
+    computePressure();
 
-    // Step 3: Integrate
-    integrate(particles, deltaTime);
+    // Step 3: Compute forces
+    computeForces();
+
+    // Step 4: Integrate
+    integrate(deltaTime);
 
 }
 
 /**
- * Compute densities and pressures for each particle.
+ * Compute densities for each particle.
  * 
- * @param {Array} particles - Array of particle objects.
  */
-function computeDensitiesAndPressures(particles) {
-    // Placeholder for density and pressure computation
-    particles.forEach(particle => {
-        // Compute density and pressure for each particle
-    });
+function computeDensities() {
+
 }
+
+
+/**
+ * Compute pressure for each particle.
+ * 
+ */
+function computePressure() {
+
+
+}
+
+
 
 /**
  * Compute forces for each particle.
  * 
- * @param {Array} particles - Array of particle objects.
  */
-function computeForces(particles) {
-    // Placeholder for force computation
-    particles.forEach(particle => {
-        // Compute forces for each particle
-    });
+function computeForces() {
+
 }
 
 /**
  * Integrate the particles' positions and velocities.
  * 
- * @param {Array} particles - Array of particle objects.
  * @param {number} deltaTime - Time step for the update.
  */
-function integrate(particles, deltaTime) {
-    // Placeholder for integration step
-    particles.forEach(particle => {
-        // Update position and velocity for each particle
-    });
+function integrate(deltaTime) {
+
 }
