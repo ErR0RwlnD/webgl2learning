@@ -1,24 +1,31 @@
 "use strict";
 
+window.pressure_solver = "EOS";
+window.pressure_stiffness = 1000;
+window.viscosity = "XSPH";
+
+const G = 10;
 const PI = Math.PI;
+const vec3 = glMatrix.vec3;
 
 let grid = new Map();
 
 
 class Particle {
     constructor(x, y, z, radius) {
-        this.position = { x, y, z };
-        this.velocity = { x: 0, y: 0, z: 0 };
+        this.position = vec3.fromValues(x, y, z);
+        this.velocity = vec3.create();
         this.density = 0;
         this.pressure = 0;
+        this.isBoundary = false;
     }
 }
 
 function getGridCell(pos) {
     return [
-        Math.floor(pos.x / window.radius),
-        Math.floor(pos.y / window.radius),
-        Math.floor(pos.z / window.radius)
+        Math.floor(pos[0] / window.radius),
+        Math.floor(pos[1] / window.radius),
+        Math.floor(pos[2] / window.radius)
     ];
 }
 
@@ -47,6 +54,7 @@ function findNeighbors(particle) {
     return neighbors;
 }
 
+// when initialization, mass carried by each particle divided by the density is ONE.
 function initSPH() {
     const width = window.container_size / 2;
     const height = window.container_size / 4;
@@ -62,9 +70,7 @@ function initSPH() {
         for (let y = startY; y < startY + height; y += window.particle_distance * 2) {
             for (let z = startZ; z < startZ + length; z += window.particle_distance * 2) {
                 const particle = new Particle(x, y, z, window.particle_distance);
-                particle.position.x = x - window.container_size / 2;
-                particle.position.y = y - window.container_size / 2;
-                particle.position.z = z - window.container_size / 2;
+                vec3.set(particle.position, x - window.container_size / 2, y - window.container_size / 2, z - window.container_size / 2);
                 window.particles.push(particle);
                 addToGrid(particle);
             }
@@ -73,21 +79,50 @@ function initSPH() {
 }
 
 /**
- * Cubic spline kernel function.
+ * Compute the cubic spline kernel value with grids.
  * 
- * @param {number} r - Distance between particles.
- * @param {number} h - Smoothing length.
- * @returns {number} - Kernel value.
+ * @param {vec3} center - The position of the center particle.
+ * @param {vec3} neighbor - The position of the neighbor particle.
+ * @param {number} h - The smoothing length.
+ * @returns {number} - The kernel value.
  */
-function cubicSplineKernel(r, h) {
+function cubicSplineKernel(center, neighbor, h) {
+    const r = vec3.distance(center, neighbor);
     const q = r / h;
-    const alpha = 8 / (PI * Math.pow(h, 3));
+    const alpha = 8 / (Math.PI * Math.pow(h, 3));
 
-    if (q >= 0 && q <= 0.5) {
-        return alpha * 6 * (Math.pow(q, 3) - Math.pow(q, 2) + 1);
+    if (q <= 1) {
+        return alpha * (1 - 1.5 * Math.pow(q, 2) + 0.75 * Math.pow(q, 3));
     } else {
-        return alpha * 2 * Math.pow(1 - q, 3);
+        return alpha * 0.25 * Math.pow(2 - q, 3);
     }
+}
+
+/**
+ * Compute the gradient of the cubic spline kernel with grids.
+ * 
+ * @param {vec3} center - The position of the center particle.
+ * @param {vec3} neighbor - The position of the neighbor particle.
+ * @param {number} h - The smoothing length.
+ * @returns {vec3} - The gradient of the kernel.
+ */
+function cubicSplineKernelGradient(center, neighbor, h) {
+    const r = vec3.distance(center, neighbor);
+    const q = r / h;
+    const alpha = 8 / (Math.PI * Math.pow(h, 3));
+    const gradient = vec3.create();
+
+    if (q <= 1) {
+        const factor = alpha * (-3 * q + 2.25 * Math.pow(q, 2)) / h;
+        vec3.subtract(gradient, neighbor, center);
+        vec3.scale(gradient, gradient, factor / r);
+    } else {
+        const factor = -alpha * 0.75 * Math.pow(2 - q, 2) / h;
+        vec3.subtract(gradient, neighbor, center);
+        vec3.scale(gradient, gradient, factor / r);
+    }
+
+    return gradient;
 }
 
 
@@ -118,7 +153,18 @@ function updateSPH(deltaTime) {
  * 
  */
 function computeDensities() {
-
+    window.particles.forEach(particle => {
+        if (!particle.isBoundary) {
+            particle.density = 0;
+            const neighbors = findNeighbors(particle);
+            neighbors.forEach(neighbor => {
+                const kernelValue = cubicSplineKernel(particle.position, neighbor.position, window.radius);
+                particle.density += neighbor.isBoundary ? 0 : neighbor.mass * kernelValue;
+            });
+        } else {
+            particle.density = particle.mass;
+        }
+    });
 }
 
 

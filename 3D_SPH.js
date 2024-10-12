@@ -151,7 +151,7 @@ function drawSPH(gl, deltaTime, projectionMatrix, modelViewMatrix) {
 }
 
 function renderSPH(gl, projectionMatrix, modelViewMatrix) {
-    const particlePositions = window.particles.flatMap(p => [p.position.x, p.position.y, p.position.z]);
+    const particlePositions = window.particles.flatMap(p => [p.position[0], p.position[1], p.position[2]]);
 
     gl.useProgram(particleProgramInfo.program);
 
