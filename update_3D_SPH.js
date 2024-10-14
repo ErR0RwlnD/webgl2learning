@@ -7,16 +7,66 @@ window.viscosity = "XSPH";
 const G = 10;
 const PI = Math.PI;
 const vec3 = glMatrix.vec3;
+const rho0 = 1000;
 
 let grid = new Map();
 
+/**
+ * Compute the cubic spline kernel value with grids.
+ * 
+ * @param {vec3} center - The position of the center particle.
+ * @param {vec3} neighbor - The position of the neighbor particle.
+ * @param {number} h - The smoothing length/kernel radius.
+ * @returns {number} - The kernel value.
+ */
+function cubicSplineKernel(center, neighbor, h) {
+    const r = vec3.distance(center, neighbor);
+    const q = r / h;
+    const alpha = 8 / (Math.PI * Math.pow(h, 3));
+
+    if (q <= 1) {
+        return alpha * (1 - 1.5 * Math.pow(q, 2) + 0.75 * Math.pow(q, 3));
+    } else {
+        return alpha * 0.25 * Math.pow(2 - q, 3);
+    }
+    return 0;
+}
+
+/**
+ * Compute the gradient of the cubic spline kernel with grids.
+ * 
+ * @param {vec3} center - The position of the center particle.
+ * @param {vec3} neighbor - The position of the neighbor particle.
+ * @param {number} h - The smoothing length/kernel radius.
+ * @returns {vec3} - The gradient of the kernel.
+ */
+function cubicSplineKernelGradient(center, neighbor, h) {
+    const r = vec3.distance(center, neighbor);
+    const q = r / h;
+    const alpha = 8 / (Math.PI * Math.pow(h, 3));
+    const gradient = vec3.create();
+
+    if (q <= 1) {
+        const factor = alpha * (-3 * q + 2.25 * Math.pow(q, 2)) / h;
+        vec3.subtract(gradient, neighbor, center);
+        vec3.scale(gradient, gradient, factor / r);
+    } else {
+        const factor = -alpha * 0.75 * Math.pow(2 - q, 2) / h;
+        vec3.subtract(gradient, neighbor, center);
+        vec3.scale(gradient, gradient, factor / r);
+    }
+
+    return gradient;
+}
 
 class Particle {
+    static mass = 1;
+
     constructor(x, y, z, radius) {
         this.position = vec3.fromValues(x, y, z);
         this.velocity = vec3.create();
-        this.density = 0;
-        this.pressure = 0;
+        this.density = 1;
+        this.pressure = 1;
         this.isBoundary = false;
     }
 }
@@ -54,8 +104,31 @@ function findNeighbors(particle) {
     return neighbors;
 }
 
+function initMass() {
+    const h = window.kernel_radius;
+    let totalMass = 0;
+    const center = vec3.fromValues(0, 0, 0);
+
+    for (let x = -h; x <= h; x += window.particle_distance) {
+        for (let y = -h; y <= h; y += window.particle_distance) {
+            for (let z = -h; z <= h; z += window.particle_distance) {
+                const neighbor = vec3.fromValues(x, y, z);
+                const kernelValue = cubicSplineKernel(center, neighbor, h);
+
+                totalMass += kernelValue;
+            }
+        }
+    }
+
+    Particle.mass = rho / totalMass;
+}
+
+
+
 // when initialization, mass carried by each particle divided by the density is ONE.
 function initSPH() {
+    initMass();
+
     const width = window.container_size / 2;
     const height = window.container_size / 4;
     const length = window.container_size;
@@ -78,52 +151,7 @@ function initSPH() {
     }
 }
 
-/**
- * Compute the cubic spline kernel value with grids.
- * 
- * @param {vec3} center - The position of the center particle.
- * @param {vec3} neighbor - The position of the neighbor particle.
- * @param {number} h - The smoothing length.
- * @returns {number} - The kernel value.
- */
-function cubicSplineKernel(center, neighbor, h) {
-    const r = vec3.distance(center, neighbor);
-    const q = r / h;
-    const alpha = 8 / (Math.PI * Math.pow(h, 3));
 
-    if (q <= 1) {
-        return alpha * (1 - 1.5 * Math.pow(q, 2) + 0.75 * Math.pow(q, 3));
-    } else {
-        return alpha * 0.25 * Math.pow(2 - q, 3);
-    }
-}
-
-/**
- * Compute the gradient of the cubic spline kernel with grids.
- * 
- * @param {vec3} center - The position of the center particle.
- * @param {vec3} neighbor - The position of the neighbor particle.
- * @param {number} h - The smoothing length.
- * @returns {vec3} - The gradient of the kernel.
- */
-function cubicSplineKernelGradient(center, neighbor, h) {
-    const r = vec3.distance(center, neighbor);
-    const q = r / h;
-    const alpha = 8 / (Math.PI * Math.pow(h, 3));
-    const gradient = vec3.create();
-
-    if (q <= 1) {
-        const factor = alpha * (-3 * q + 2.25 * Math.pow(q, 2)) / h;
-        vec3.subtract(gradient, neighbor, center);
-        vec3.scale(gradient, gradient, factor / r);
-    } else {
-        const factor = -alpha * 0.75 * Math.pow(2 - q, 2) / h;
-        vec3.subtract(gradient, neighbor, center);
-        vec3.scale(gradient, gradient, factor / r);
-    }
-
-    return gradient;
-}
 
 
 

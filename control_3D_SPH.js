@@ -1,6 +1,6 @@
 "use strict";
 
-window.radius = 40;
+window.kernel_radius = 40;
 window.particle_distance = 20;
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (kernelRadiusSlider) {
             kernelRadiusSlider.min = Math.ceil(1.5 * window.particle_distance).toString();
             kernelRadiusSlider.max = (10 * window.particle_distance).toString();
-            kernelRadiusSlider.value = window.radius.toString();
+            kernelRadiusSlider.value = window.kernel_radius.toString();
             kernelRadiusValue.textContent = kernelRadiusSlider.value;
         }
     }
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (kernelRadiusSlider) {
         kernelRadiusSlider.addEventListener('input', function () {
-            window.radius = parseFloat(this.value);
+            window.kernel_radius = parseFloat(this.value);
             kernelRadiusValue.textContent = this.value;
         });
     }
