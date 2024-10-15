@@ -3,13 +3,29 @@
 window.pressure_solver = "EOS";
 window.pressure_stiffness = 1000;
 window.viscosity = "XSPH";
+window.MonaghanViscosity = 0.01;
+window.XSPHViscosity = 0.2;
 
-const G = 10;
-const PI = Math.PI;
 const vec3 = glMatrix.vec3;
+const G = vec3.fromValues(0, -9.81, 0);
+const PI = Math.PI;
+
 const rho0 = 1000;
 
 let grid = new Map();
+
+class Particle {
+    static mass = 1;
+
+    constructor(x, y, z, radius) {
+        this.position = vec3.fromValues(x, y, z);
+        this.velocity = vec3.create();
+        this.density = 1;
+        this.pressure = 1;
+        this.viscosityForce = vec3.create();
+    }
+}
+
 
 /**
  * Compute the cubic spline kernel value with grids.
@@ -59,23 +75,11 @@ function cubicSplineKernelGradient(center, neighbor, h) {
     return gradient;
 }
 
-class Particle {
-    static mass = 1;
-
-    constructor(x, y, z, radius) {
-        this.position = vec3.fromValues(x, y, z);
-        this.velocity = vec3.create();
-        this.density = 1;
-        this.pressure = 1;
-        this.isBoundary = false;
-    }
-}
-
 function getGridCell(pos) {
     return [
-        Math.floor(pos[0] / window.radius),
-        Math.floor(pos[1] / window.radius),
-        Math.floor(pos[2] / window.radius)
+        Math.floor(pos[0] / window.kernel_radius),
+        Math.floor(pos[1] / window.kernel_radius),
+        Math.floor(pos[2] / window.kernel_radius)
     ];
 }
 
@@ -109,10 +113,11 @@ function initMass() {
     let totalMass = 0;
     const center = vec3.fromValues(0, 0, 0);
 
-    for (let x = -h; x <= h; x += window.particle_distance) {
-        for (let y = -h; y <= h; y += window.particle_distance) {
-            for (let z = -h; z <= h; z += window.particle_distance) {
-                const neighbor = vec3.fromValues(x, y, z);
+    const N = Math.ceil(h / window.particle_distance);
+    for (let x = -N; x <= N; x++) {
+        for (let y = -N; y <= N; y++) {
+            for (let z = -N; z <= N; z++) {
+                const neighbor = vec3.fromValues(x * window.particle_distance, y * window.particle_distance, z * window.particle_distance);
                 const kernelValue = cubicSplineKernel(center, neighbor, h);
 
                 totalMass += kernelValue;
@@ -120,7 +125,7 @@ function initMass() {
         }
     }
 
-    Particle.mass = rho / totalMass;
+    Particle.mass = rho0 / totalMass;
 }
 
 
@@ -145,7 +150,6 @@ function initSPH() {
                 const particle = new Particle(x, y, z, window.particle_distance);
                 vec3.set(particle.position, x - window.container_size / 2, y - window.container_size / 2, z - window.container_size / 2);
                 window.particles.push(particle);
-                addToGrid(particle);
             }
         }
     }
@@ -162,37 +166,46 @@ function initSPH() {
  * @param {number} deltaTime - Time step for the update.
  */
 function updateSPH(deltaTime) {
+    grid = new Map();
+
+    for (const particle of window.particles) {
+        addToGrid(particle);
+    }
+
     // Step 1: Compute densities
     computeDensities();
 
-    // Step 2: Compute pressures
-    computePressure();
+    // Step 2: Compute viscosity forces
+    if (window.viscosity === "MONAGHAN") {
+        computeViscosityForcesMONAGHAN();
+    } else if (window.viscosity === "XSPH") {
+        computeViscosityForcesXSPH(deltaTime);
+    }
 
-    // Step 3: Compute forces
-    computeForces();
+    // Step 3: Compute pressure
+    computePressure();
 
     // Step 4: Integrate
     integrate(deltaTime);
 
+
 }
+
+
 
 /**
  * Compute densities for each particle.
  * 
  */
 function computeDensities() {
-    window.particles.forEach(particle => {
-        if (!particle.isBoundary) {
-            particle.density = 0;
-            const neighbors = findNeighbors(particle);
-            neighbors.forEach(neighbor => {
-                const kernelValue = cubicSplineKernel(particle.position, neighbor.position, window.radius);
-                particle.density += neighbor.isBoundary ? 0 : neighbor.mass * kernelValue;
-            });
-        } else {
-            particle.density = particle.mass;
+    for (const particle of window.particles) {
+        particle.density = 0;
+        const neighbors = findNeighbors(particle);
+        for (const neighbor of neighbors) {
+            const kernelValue = cubicSplineKernel(particle.position, neighbor.position, window.kernel_radius);
+            particle.density += Particle.mass * kernelValue;
         }
-    });
+    }
 }
 
 
@@ -201,25 +214,93 @@ function computeDensities() {
  * 
  */
 function computePressure() {
-
-
+    if(window.pressure_solver === "EOS") {
+        for (const particle of window.particles) {
+            particle.pressure = window.pressure_stiffness * (Math.pow(particle.density / rho0, 7) - 1);
+        }
+    }else if(window.pressure_solver === "IISPH") {
+        // TODO
+    }
 }
 
-
-
 /**
- * Compute forces for each particle.
- * 
+ * Compute viscosity forces using Monaghan's formulation.
  */
-function computeForces() {
+function computeViscosityForcesMONAGHAN() {
+    for (const particle of window.particles) {
+        const neighbors = findNeighbors(particle);
+        const viscosityForce = vec3.create();
 
+        for (const neighbor of neighbors) {
+            if (neighbor !== particle) {
+                const r = vec3.distance(particle.position, neighbor.position);
+                const q = r / window.kernel_radius;
+
+                if (q < 1) {
+                    const u = vec3.create();
+                    vec3.subtract(u, neighbor.velocity, particle.velocity);
+                    const kernelGradient = cubicSplineKernelGradient(particle.position, neighbor.position, window.kernel_radius);
+
+                    const factor = window.MonaghanViscosity * (1 - q) * (Particle.mass / neighbor.density);
+                    vec3.scaleAndAdd(viscosityForce, viscosityForce, kernelGradient, factor);
+                }
+            }
+        }
+
+        vec3.scale(viscosityForce, viscosityForce, Particle.mass);
+        vec3.add(particle.viscosityForce, particle.viscosityForce, viscosityForce);
+    }
 }
 
 /**
- * Integrate the particles' positions and velocities.
+ * Compute viscosity forces using XSPH formulation.
+ */
+function computeViscosityForcesXSPH(deltaTime) {
+    for (const particle of window.particles) {
+        vec3.scaleAndAdd(particle.velocity, particle.velocity, G, deltaTime);
+
+        const neighbors = findNeighbors(particle);
+
+        for (const neighbor of neighbors) {
+            if (neighbor !== particle) {
+                const r = vec3.distance(particle.position, neighbor.position);
+                const q = r / window.kernel_radius;
+
+                if (q < 1) {
+                    const u = vec3.create();
+                    vec3.subtract(u, neighbor.velocity, particle.velocity);
+                    const kernelValue = cubicSplineKernel(particle.position, neighbor.position, window.kernel_radius);
+
+                    const factor = window.XSPHViscosity * (Particle.mass / neighbor.density) * kernelValue;
+                    vec3.scaleAndAdd(particle.velocity, particle.velocity, u, factor);
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * Integrate the SPH simulation.
  * 
- * @param {number} deltaTime - Time step for the update.
+ * @param {number} deltaTime - Time step for the integration.
  */
 function integrate(deltaTime) {
+    for (const particle of window.particles) {
+        const pressureForce = vec3.create();
+        const neighbors = findNeighbors(particle);
 
-}
+        for (const neighbor of neighbors) {
+            if (neighbor !== particle) {
+                const kernelGradient = cubicSplineKernelGradient(particle.position, neighbor.position, window.kernel_radius);
+                const pressureTerm = (particle.pressure / Math.pow(particle.density, 2)) + (neighbor.pressure / Math.pow(neighbor.density, 2));
+                const factor = Particle.mass * pressureTerm;
+                vec3.scaleAndAdd(pressureForce, pressureForce, kernelGradient, factor);
+            }
+        }
+
+        vec3.scale(pressureForce, pressureForce, -1 / particle.density);
+        vec3.scaleAndAdd(particle.velocity, particle.velocity, pressureForce, deltaTime / Particle.mass);
+        vec3.scaleAndAdd(particle.position, particle.position, particle.velocity, deltaTime);
+    }
+}   

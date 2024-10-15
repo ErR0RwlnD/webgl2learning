@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Ensure the restartButton exists before adding an event listener
     if (restartButton) {
         restartButton.addEventListener('click', function () {
-            resetCanvas(); // Call the resetCanvas function to reinitialize the canvas
+            //pass
         });
     }
 
@@ -44,8 +44,13 @@ document.addEventListener('DOMContentLoaded', function () {
             zoom = -4000;
             rotation = 0;
 
+            // Cancel any ongoing animation frames
+            if (window.animationFrameId) {
+            cancelAnimationFrame(window.animationFrameId);
+            }
+
             // Redraw the scene
-            requestAnimationFrame(render);
+            window.animationFrameId = requestAnimationFrame(render);
         });
     }
 
