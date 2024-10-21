@@ -1,7 +1,7 @@
 "use strict";
 
-window.kernel_radius = 40;
-window.particle_distance = 20;
+window.kernel_radius = 100;
+window.particle_distance = 40;
 
 document.addEventListener('DOMContentLoaded', function () {
     const backButton = document.querySelector('#backButton');

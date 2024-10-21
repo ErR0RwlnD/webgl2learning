@@ -7,22 +7,227 @@ window.MonaghanViscosity = 0.01;
 window.XSPHViscosity = 0.2;
 
 const vec3 = glMatrix.vec3;
-const G = vec3.fromValues(0, -9.81, 0);
+const G = vec3.fromValues(0, -100, 0);
 const PI = Math.PI;
+const boundary_distance = 10;
 
 const rho0 = 1000;
 
-let grid = new Map();
+let boundary = [];
 
-class Particle {
+class BaseEntity {
+    constructor(x, y, z) {
+        this.position = vec3.fromValues(x, y, z);
+    }
+}
+
+class Particle extends BaseEntity {
     static mass = 1;
 
     constructor(x, y, z, radius) {
-        this.position = vec3.fromValues(x, y, z);
+        super(x, y, z);
         this.velocity = vec3.create();
         this.density = 1;
         this.pressure = 1;
         this.viscosityForce = vec3.create();
+    }
+}
+
+class Boundary extends BaseEntity {
+    constructor(x, y, z, mass) {
+        super(x, y, z);
+        this.mass = mass;
+    }
+}
+
+class Grid {
+    constructor(cellSize) {
+        this.cellSize = cellSize;
+        this.cells = new Map();
+    }
+
+    /**
+     * Get the key for the grid cell based on the position.
+     * @param {vec3} position - The position of the entity.
+     * @returns {string} - The key for the grid cell.
+     */
+    getGridCell(position) {
+        const x = Math.floor(position[0] / this.cellSize);
+        const y = Math.floor(position[1] / this.cellSize);
+        const z = Math.floor(position[2] / this.cellSize);
+        return `${x},${y},${z}`;
+    }
+
+    /**
+     * Add an entity to the grid.
+     * @param {BaseEntity} entity - The entity to add.
+     */
+    addToGrid(entity) {
+        const key = this.getGridCell(entity.position);
+        if (!this.cells.has(key)) {
+            this.cells.set(key, []);
+        }
+        this.cells.get(key).push(entity);
+    }
+
+    /**
+     * Remove an entity from the grid.
+     * @param {BaseEntity} entity - The entity to remove.
+     */
+    removeFromGrid(entity) {
+        const key = this.getGridCell(entity.position);
+        if (this.cells.has(key)) {
+            const cell = this.cells.get(key);
+            const index = cell.indexOf(entity);
+            if (index > -1) {
+                cell.splice(index, 1);
+                if (cell.length === 0) {
+                    this.cells.delete(key);
+                }
+            }
+        }
+    }
+
+    /**
+     * Update the position of an entity in the grid.
+     * @param {BaseEntity} entity - The entity to update.
+     * @param {vec3} newPosition - The new position of the entity.
+     */
+    updateEntityPosition(entity, newPosition) {
+        this.removeFromGrid(entity);
+        vec3.copy(entity.position, newPosition);
+        this.addToGrid(entity);
+    }
+
+    /**
+     * Find neighbors of an entity within a certain radius.
+     * @param {BaseEntity} entity - The entity to find neighbors for.
+     * @param {number} radius - The search radius.
+     * @returns {Array<BaseEntity>} - The list of neighboring entities.
+     */
+    findNeighbors(entity, radius) {
+        const neighbors = [];
+        const cellRadius = Math.ceil(radius / this.cellSize);
+        const [x, y, z] = this.getGridCell(entity.position).split(',').map(Number);
+
+        for (let i = -cellRadius; i <= cellRadius; i++) {
+            for (let j = -cellRadius; j <= cellRadius; j++) {
+                for (let k = -cellRadius; k <= cellRadius; k++) {
+                    const key = `${x + i},${y + j},${z + k}`;
+                    if (this.cells.has(key)) {
+                        for (const neighbor of this.cells.get(key)) {
+                            if (vec3.distance(entity.position, neighbor.position) <= radius) {
+                                neighbors.push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return neighbors;
+    }
+
+    /**
+     * Find neighbors of a particle within a certain radius.
+     * @param {Particle} particle - The particle to find neighbors for.
+     * @param {number} radius - The search radius.
+     * @returns {Array<Particle>} - The list of neighboring particles.
+     */
+    findParticleNeighbors(particle, radius) {
+        const neighbors = [];
+        const cellRadius = Math.ceil(radius / this.cellSize);
+        const [x, y, z] = this.getGridCell(particle.position).split(',').map(Number);
+
+        for (let i = -cellRadius; i <= cellRadius; i++) {
+            for (let j = -cellRadius; j <= cellRadius; j++) {
+                for (let k = -cellRadius; k <= cellRadius; k++) {
+                    const key = `${x + i},${y + j},${z + k}`;
+                    if (this.cells.has(key)) {
+                        for (const neighbor of this.cells.get(key)) {
+                            if (neighbor instanceof Particle && vec3.distance(particle.position, neighbor.position) <= radius) {
+                                neighbors.push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return neighbors;
+    }
+
+    /**
+     * Find neighbors of a boundary within a certain radius.
+     * @param {Boundary} boundary - The boundary to find neighbors for.
+     * @param {number} radius - The search radius.
+     * @returns {Array<Boundary>} - The list of neighboring boundaries.
+     */
+    findBoundaryNeighbors(boundary, radius) {
+        const neighbors = [];
+        const cellRadius = Math.ceil(radius / this.cellSize);
+        const [x, y, z] = this.getGridCell(boundary.position).split(',').map(Number);
+
+        for (let i = -cellRadius; i <= cellRadius; i++) {
+            for (let j = -cellRadius; j <= cellRadius; j++) {
+                for (let k = -cellRadius; k <= cellRadius; k++) {
+                    const key = `${x + i},${y + j},${z + k}`;
+                    if (this.cells.has(key)) {
+                        for (const neighbor of this.cells.get(key)) {
+                            if (neighbor instanceof Boundary && vec3.distance(boundary.position, neighbor.position) <= radius) {
+                                neighbors.push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return neighbors;
+    }
+}
+
+/**
+ * Precompute boundary point masses and store them in a map.
+ */
+function initBoundaryMasses() {
+    const h = window.kernel_radius;
+    const N = Math.ceil(h / window.particle_distance);
+    const center = vec3.fromValues(0, 0, 0);
+
+    for (let x = -window.container_size / 2; x <= window.container_size / 2; x += window.particle_distance) {
+        for (let y = -window.container_size / 2; y <= window.container_size / 2; y += window.particle_distance) {
+            for (let z = -window.container_size / 2; z <= window.container_size / 2; z += window.particle_distance) {
+                if (x === -window.container_size / 2 || x === window.container_size / 2 ||
+                    y === -window.container_size / 2 || y === window.container_size / 2 ||
+                    z === -window.container_size / 2 || z === window.container_size / 2) {
+
+                    const boundaryParticle = new Boundary(x, y, z, 1);
+
+                    let gamma1 = 0;
+                    let kernelSum = 0;
+
+                    for (let i = -N; i <= N; i++) {
+                        for (let j = -N; j <= N; j++) {
+                            for (let k = -N; k <= N; k++) {
+                                const neighbor = vec3.fromValues(
+                                    x + i * window.particle_distance,
+                                    y + j * window.particle_distance,
+                                    z + k * window.particle_distance
+                                );
+                                const kernelValue = cubicSplineKernel(center, neighbor, h);
+                                gamma1 += kernelValue;
+                                kernelSum += kernelValue;
+                            }
+                        }
+                    }
+
+                    gamma1 *= Math.pow(window.particle_distance, 3);
+                    boundaryParticle.mass = rho0 * gamma1 / kernelSum;
+                    boundary.push(boundaryParticle);
+                }
+            }
+        }
     }
 }
 
@@ -75,38 +280,8 @@ function cubicSplineKernelGradient(center, neighbor, h) {
     return gradient;
 }
 
-function getGridCell(pos) {
-    return [
-        Math.floor(pos[0] / window.kernel_radius),
-        Math.floor(pos[1] / window.kernel_radius),
-        Math.floor(pos[2] / window.kernel_radius)
-    ];
-}
+let grid = new Grid(window.kernel_radius);
 
-function addToGrid(particle) {
-    const cell = getGridCell(particle.position);
-    const key = `${cell[0]},${cell[1]},${cell[2]}`;
-    if (!grid.has(key)) {
-        grid.set(key, []);
-    }
-    grid.get(key).push(particle);
-}
-
-function findNeighbors(particle) {
-    const neighbors = [];
-    const cell = getGridCell(particle.position);
-    for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-            for (let k = -1; k <= 1; k++) {
-                const key = `${cell[0] + i},${cell[1] + j},${cell[2] + k}`;
-                if (grid.has(key)) {
-                    neighbors.push(...grid.get(key));
-                }
-            }
-        }
-    }
-    return neighbors;
-}
 
 function initMass() {
     const h = window.kernel_radius;
@@ -128,11 +303,10 @@ function initMass() {
     Particle.mass = rho0 / totalMass;
 }
 
-
-
 // when initialization, mass carried by each particle divided by the density is ONE.
 function initSPH() {
     initMass();
+    initBoundaryMasses();
 
     const width = window.container_size / 2;
     const height = window.container_size / 4;
@@ -142,21 +316,32 @@ function initSPH() {
     const startZ = (window.container_size - length) / 2;
 
     window.particles = []; // Clear existing particles
-    grid = new Map(); // Clear the grid
+    grid = new Grid(window.kernel_radius); // Clear the grid
 
     for (let x = startX; x < startX + width; x += window.particle_distance * 2) {
-        for (let y = startY; y < startY + height; y += window.particle_distance * 2) {
+        for (let y = startY - window.kernel_radius; y < startY + height - window.kernel_radius; y += window.particle_distance * 2) {
             for (let z = startZ; z < startZ + length; z += window.particle_distance * 2) {
                 const particle = new Particle(x, y, z, window.particle_distance);
-                vec3.set(particle.position, x - window.container_size / 2, y - window.container_size / 2, z - window.container_size / 2);
+                vec3.set(particle.position, x - window.container_size / 2 + getRandomOffset(),
+                    y - window.container_size / 2 + getRandomOffset(),
+                    z - window.container_size / 2 + getRandomOffset());
                 window.particles.push(particle);
             }
         }
     }
+
+    for (const particle of window.particles) {
+        grid.addToGrid(particle);
+    }
+
+    for (const boundaryParticle of boundary) {
+        grid.addToGrid(boundaryParticle);
+    }
 }
 
-
-
+function getRandomOffset() {
+    return Math.random() * 1e-6 - 5 * 1e-7;
+}
 
 
 /**
@@ -166,12 +351,6 @@ function initSPH() {
  * @param {number} deltaTime - Time step for the update.
  */
 function updateSPH(deltaTime) {
-    grid = new Map();
-
-    for (const particle of window.particles) {
-        addToGrid(particle);
-    }
-
     // Step 1: Compute densities
     computeDensities();
 
@@ -187,8 +366,6 @@ function updateSPH(deltaTime) {
 
     // Step 4: Integrate
     integrate(deltaTime);
-
-
 }
 
 
@@ -200,7 +377,7 @@ function updateSPH(deltaTime) {
 function computeDensities() {
     for (const particle of window.particles) {
         particle.density = 0;
-        const neighbors = findNeighbors(particle);
+        const neighbors = grid.findNeighbors(particle, window.kernel_radius);
         for (const neighbor of neighbors) {
             const kernelValue = cubicSplineKernel(particle.position, neighbor.position, window.kernel_radius);
             particle.density += Particle.mass * kernelValue;
@@ -214,11 +391,11 @@ function computeDensities() {
  * 
  */
 function computePressure() {
-    if(window.pressure_solver === "EOS") {
+    if (window.pressure_solver === "EOS") {
         for (const particle of window.particles) {
             particle.pressure = window.pressure_stiffness * (Math.pow(particle.density / rho0, 7) - 1);
         }
-    }else if(window.pressure_solver === "IISPH") {
+    } else if (window.pressure_solver === "IISPH") {
         // TODO
     }
 }
@@ -228,7 +405,7 @@ function computePressure() {
  */
 function computeViscosityForcesMONAGHAN() {
     for (const particle of window.particles) {
-        const neighbors = findNeighbors(particle);
+        const neighbors = grid.findNeighbors(particle, kernel_radius);
         const viscosityForce = vec3.create();
 
         for (const neighbor of neighbors) {
@@ -259,7 +436,7 @@ function computeViscosityForcesXSPH(deltaTime) {
     for (const particle of window.particles) {
         vec3.scaleAndAdd(particle.velocity, particle.velocity, G, deltaTime);
 
-        const neighbors = findNeighbors(particle);
+        const neighbors = grid.findNeighbors(particle, window.kernel_radius);
 
         for (const neighbor of neighbors) {
             if (neighbor !== particle) {
@@ -288,7 +465,7 @@ function computeViscosityForcesXSPH(deltaTime) {
 function integrate(deltaTime) {
     for (const particle of window.particles) {
         const pressureForce = vec3.create();
-        const neighbors = findNeighbors(particle);
+        const neighbors = grid.findNeighbors(particle, window.kernel_radius);
 
         for (const neighbor of neighbors) {
             if (neighbor !== particle) {
