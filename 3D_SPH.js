@@ -2,7 +2,16 @@
 
 const mat4 = glMatrix.mat4;
 
-window.container_size = 2000;
+window.SPH_config = {
+    kernel_radius: 80,
+    particle_distance: 40,
+    container_size: 2000,
+    pressure_solver: "EOS",
+    pressure_stiffness: 1000,
+    viscosity: "XSPH",
+    MonaghanViscosity: 0.01,
+    XSPHViscosity: 0.2,
+};
 window.particles = [];
 window.boundary = [];
 
@@ -168,14 +177,14 @@ function renderSPH(gl, projectionMatrix, modelViewMatrix) {
 
 function initContainerBuffers(gl) {
     const positions = [
-        -window.container_size / 2, -window.container_size / 2, window.container_size / 2,
-        window.container_size / 2, -window.container_size / 2, window.container_size / 2,
-        window.container_size / 2, window.container_size / 2, window.container_size / 2,
-        -window.container_size / 2, window.container_size / 2, window.container_size / 2,
-        -window.container_size / 2, -window.container_size / 2, -window.container_size / 2,
-        window.container_size / 2, -window.container_size / 2, -window.container_size / 2,
-        window.container_size / 2, window.container_size / 2, -window.container_size / 2,
-        -window.container_size / 2, window.container_size / 2, -window.container_size / 2,
+        -window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2, window.SPH_config.container_size / 2,
+        window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2, window.SPH_config.container_size / 2,
+        window.SPH_config.container_size / 2, window.SPH_config.container_size / 2, window.SPH_config.container_size / 2,
+        -window.SPH_config.container_size / 2, window.SPH_config.container_size / 2, window.SPH_config.container_size / 2,
+        -window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2,
+        window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2,
+        window.SPH_config.container_size / 2, window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2,
+        -window.SPH_config.container_size / 2, window.SPH_config.container_size / 2, -window.SPH_config.container_size / 2,
     ];
 
     const indices = [

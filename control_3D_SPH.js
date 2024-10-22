@@ -1,8 +1,5 @@
 "use strict";
 
-window.kernel_radius = 100;
-window.particle_distance = 40;
-
 document.addEventListener('DOMContentLoaded', function () {
     const backButton = document.querySelector('#backButton');
     const toggleButton = document.querySelector('#toggleButton');
@@ -34,8 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (resetButton) {
         resetButton.addEventListener('click', function () {
-            // Reset particles
-            window.particles = [];
+            // Reset particles and boundary
             window.initSPH();
             updateKernelRadiusRange();
             updateParticleCount();
@@ -46,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Cancel any ongoing animation frames
             if (window.animationFrameId) {
-            cancelAnimationFrame(window.animationFrameId);
+                cancelAnimationFrame(window.animationFrameId);
             }
 
             // Redraw the scene
@@ -62,9 +58,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateKernelRadiusRange() {
         if (kernelRadiusSlider) {
-            kernelRadiusSlider.min = Math.ceil(1.5 * window.particle_distance).toString();
-            kernelRadiusSlider.max = (10 * window.particle_distance).toString();
-            kernelRadiusSlider.value = window.kernel_radius.toString();
+            kernelRadiusSlider.min = Math.ceil(1.5 * window.SPH_config.particle_distance).toString();
+            kernelRadiusSlider.max = (10 * window.SPH_config.particle_distance).toString();
+            kernelRadiusSlider.value = window.SPH_config.kernel_radius.toString();
             kernelRadiusValue.textContent = kernelRadiusSlider.value;
         }
     }
@@ -77,14 +73,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (kernelRadiusSlider) {
         kernelRadiusSlider.addEventListener('input', function () {
-            window.kernel_radius = parseFloat(this.value);
+            window.SPH_config.kernel_radius = parseFloat(this.value);
             kernelRadiusValue.textContent = this.value;
         });
     }
 
     if (particleSizeSlider) {
         particleSizeSlider.addEventListener('input', function () {
-            window.particle_distance = parseFloat(this.value);
+            window.SPH_config.particle_distance = parseFloat(this.value);
             particleSizeValue.textContent = this.value;
             updateKernelRadiusRange();
             updateParticleCount();
