@@ -158,7 +158,7 @@ class Grid {
 
         for (let i = -1; i <= 1; i++) {
             for (let j = -1; j <= 1; j++) {
-                for (let k = -1; i <= 1; k++) {
+                for (let k = -1; k <= 1; k++) {
                     const key = `${x + i},${y + j},${z + k}`;
                     if (this.cells.has(key)) {
                         for (const neighbor of this.cells.get(key)) {
@@ -238,7 +238,7 @@ function initBoundaryMasses() {
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     const worker = new Worker(URL.createObjectURL(blob));
 
-    worker.onmessage = function(e) {
+    worker.onmessage = function (e) {
         for (const { x, y, z, mass } of e.data) {
             const boundaryParticle = new Boundary(x, y, z, mass);
             boundaryParticles.push(boundaryParticle);
@@ -280,6 +280,10 @@ function cubicSplineKernel(center, neighbor, h) {
  * @returns {vec3} - The gradient of the kernel.
  */
 function cubicSplineKernelGradient(center, neighbor, h) {
+    if (vec3.equals(center, neighbor)) {
+        return vec3.fromValues(0, 0, 0);
+    }
+
     const r = vec3.distance(center, neighbor);
     const q = r / h;
     const alpha = 8 / (Math.PI * Math.pow(h, 3));
@@ -328,7 +332,7 @@ function initSPH() {
     initMass();
     initBoundaryMasses();
     alert("SPH mass initialized, you can expand the control panel now.");
-    
+
 
     const width = window.SPH_config.container_size / 2;
     const height = window.SPH_config.container_size / 4;
@@ -390,7 +394,7 @@ function computeDensities() {
 function computePressure() {
     if (window.SPH_config.pressure_solver === "EOS") {
         for (const particle of window.particles) {
-            particle.pressure = window.SPH_config.pressure_stiffness * (Math.pow(particle.density / rho0, 7) - 1);
+            particle.pressure = window.SPH_config.pressure_stiffness * (Math.pow(particle.density / rho0, 9) - 1);
         }
     } else if (window.SPH_config.pressure_solver === "IISPH") {
         // TODO
@@ -452,23 +456,46 @@ function integrate(deltaTime) {
 
     for (const particle of window.particles) {
         const pressureForce = vec3.create();
+        const sumOfWiif = vec3.create();
+        const sumOfWiib = vec3.create();
+
         const particleNeighbors = grid.findParticleNeighbors(particle);
+        const boundaryNeighbors = grid.findBoundaryNeighbors(particle);
 
         for (const neighbor of particleNeighbors) {
-            if (neighbor !== particle) {
-                const kernelGradient = cubicSplineKernelGradient(particle.position, neighbor.position, window.SPH_config.kernel_radius);
-                const pressureTerm = (particle.pressure / Math.pow(particle.density, 2)) + (neighbor.pressure / Math.pow(neighbor.density, 2));
-                const factor = Particle.mass * pressureTerm;
-                vec3.scaleAndAdd(pressureForce, pressureForce, kernelGradient, factor);
-            }
+            const kernelGradient = cubicSplineKernelGradient(particle.position, neighbor.position, window.SPH_config.kernel_radius);
+            const pressureTerm = (particle.pressure / Math.pow(particle.density, 2)) + (neighbor.pressure / Math.pow(neighbor.density, 2));
+            const factor = Particle.mass * pressureTerm;
+            vec3.scaleAndAdd(pressureForce, pressureForce, kernelGradient, factor);
+            vec3.add(sumOfWiif, sumOfWiif, kernelGradient);
         }
 
-        vec3.scale(pressureForce, pressureForce, -1 / particle.density);
+        if (particle.density > rho0 && boundaryNeighbors.length > 0) {
+            for (const neighbor of boundaryNeighbors) {
+                const kernelGradient = cubicSplineKernelGradient(particle.position, neighbor.position, window.SPH_config.kernel_radius);
+                vec3.add(sumOfWiib, sumOfWiib, kernelGradient);
+            }
+            const gamma2 = vec3.dot(sumOfWiif, sumOfWiib) / vec3.dot(sumOfWiib, sumOfWiib);
+            const additionalForce = vec3.create();
+            vec3.scale(additionalForce, sumOfWiib, 2 * gamma2 * particle.pressure * Particle.mass * Particle.mass / (particle.density * particle.density));
+            vec3.add(pressureForce, pressureForce, additionalForce);
+        }
+
+        // vec3.scale(pressureForce, pressureForce, -1 / particle.density);
+        vec3.scale(pressureForce, pressureForce, -1);
         const newVelocity = vec3.create();
         vec3.scaleAndAdd(newVelocity, particle.velocity, pressureForce, deltaTime / Particle.mass);
 
         const newPosition = vec3.create();
         vec3.scaleAndAdd(newPosition, particle.position, newVelocity, deltaTime);
+        const halfSize = window.SPH_config.container_size / 2;
+        for (let i = 0; i < 3; i++) {
+            if (newPosition[i] < -halfSize) {
+                newPosition[i] = -halfSize + boundary_distance;
+            } else if (newPosition[i] > halfSize) {
+                newPosition[i] = halfSize - boundary_distance;
+            }
+        }
 
         const updatedParticle = new Particle(newPosition[0], newPosition[1], newPosition[2], window.SPH_config.particle_distance);
         vec3.copy(updatedParticle.velocity, newVelocity);
