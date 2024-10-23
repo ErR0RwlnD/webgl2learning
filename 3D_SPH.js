@@ -3,7 +3,7 @@
 const mat4 = glMatrix.mat4;
 
 window.SPH_config = {
-    kernel_radius: 80,
+    kernel_radius: 100,
     particle_distance: 40,
     container_size: 2000,
     pressure_solver: "EOS",
@@ -114,7 +114,6 @@ initShaders().then(({ particleShaderProgram, containerShaderProgram }) => {
     // Initial resize to set up the canvas size and draw the initial scene
     window.dispatchEvent(new Event('resize'));
     window.initSPH();
-    requestAnimationFrame(render);
 });
 
 // Draw the scene repeatedly

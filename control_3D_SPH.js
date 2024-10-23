@@ -1,11 +1,37 @@
 "use strict";
 
+let animationFrameId;
+
 document.addEventListener('DOMContentLoaded', function () {
     const backButton = document.querySelector('#backButton');
     const toggleButton = document.querySelector('#toggleButton');
-    const restartButton = document.querySelector('#runButton');
     const controls = document.querySelector('.controls');
     const resetButton = document.querySelector('#reset');
+    const startButton = document.querySelector('#start');
+
+    if (startButton) {
+        startButton.addEventListener('click', function () {
+            // Start rendering
+            then = performance.now() * 0.001;
+            animationFrameId = requestAnimationFrame(window.render);
+        });
+    }
+
+    if (resetButton) {
+        resetButton.addEventListener('click', function () {
+            // Cancel any ongoing animation frames
+            cancelAnimationFrame(animationFrameId);
+
+            // Reset particles and boundary
+            window.initSPH();
+            updateKernelRadiusRange();
+            updateParticleCount();
+
+            // Reset camera
+            zoom = -4000;
+            rotation = 0;
+        });
+    }
 
     // Ensure the backButton exists before adding an event listener
     if (backButton) {
@@ -22,33 +48,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Ensure the restartButton exists before adding an event listener
-    if (restartButton) {
-        restartButton.addEventListener('click', function () {
-            //pass
-        });
-    }
-
-    if (resetButton) {
-        resetButton.addEventListener('click', function () {
-            // Reset particles and boundary
-            window.initSPH();
-            updateKernelRadiusRange();
-            updateParticleCount();
-
-            // Reset camera
-            zoom = -4000;
-            rotation = 0;
-
-            // Cancel any ongoing animation frames
-            if (window.animationFrameId) {
-                cancelAnimationFrame(window.animationFrameId);
-            }
-
-            // Redraw the scene
-            window.animationFrameId = requestAnimationFrame(render);
-        });
-    }
 
     const kernelRadiusSlider = document.querySelector('#kernel_radius');
     const particleSizeSlider = document.querySelector('#particle_size');
@@ -59,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateKernelRadiusRange() {
         if (kernelRadiusSlider) {
             kernelRadiusSlider.min = Math.ceil(1.5 * window.SPH_config.particle_distance).toString();
-            kernelRadiusSlider.max = (10 * window.SPH_config.particle_distance).toString();
+            kernelRadiusSlider.max = (5 * window.SPH_config.particle_distance).toString();
             kernelRadiusSlider.value = window.SPH_config.kernel_radius.toString();
             kernelRadiusValue.textContent = kernelRadiusSlider.value;
         }

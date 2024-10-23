@@ -104,16 +104,16 @@ class Grid {
 
         for (let i = -1; i <= 1; i++) {
             for (let j = -1; j <= 1; j++) {
-            for (let k = -1; k <= 1; k++) {
-                const key = `${x + i},${y + j},${z + k}`;
-                if (this.cells.has(key)) {
-                for (const neighbor of this.cells.get(key)) {
-                    if (vec3.distance(entity.position, neighbor.position) <= window.SPH_config.kernel_radius) {
-                    neighbors.push(neighbor);
+                for (let k = -1; k <= 1; k++) {
+                    const key = `${x + i},${y + j},${z + k}`;
+                    if (this.cells.has(key)) {
+                        for (const neighbor of this.cells.get(key)) {
+                            if (vec3.distance(entity.position, neighbor.position) <= window.SPH_config.kernel_radius) {
+                                neighbors.push(neighbor);
+                            }
+                        }
                     }
                 }
-                }
-            }
             }
         }
 
@@ -190,40 +190,63 @@ function initBoundaryMasses() {
     const N = Math.ceil(h / boundary_distance);
     const center = vec3.fromValues(0, 0, 0);
 
-    for (let x = -window.SPH_config.container_size / 2; x <= window.SPH_config.container_size / 2; x += boundary_distance) {
-        for (let y = -window.SPH_config.container_size / 2; y <= window.SPH_config.container_size / 2; y += boundary_distance) {
-            for (let z = -window.SPH_config.container_size / 2; z <= window.SPH_config.container_size / 2; z += boundary_distance) {
-                if (x === -window.SPH_config.container_size / 2 || x === window.SPH_config.container_size / 2 ||
-                    y === -window.SPH_config.container_size / 2 || y === window.SPH_config.container_size / 2 ||
-                    z === -window.SPH_config.container_size / 2 || z === window.SPH_config.container_size / 2) {
+    let gamma1 = 0;
+    let kernelSum = 0;
+    let baseMass = 0;
 
-                    const boundaryParticle = new Boundary(x, y, z, 1);
-
-                    let gamma1 = 0;
-                    let kernelSum = 0;
-
-                    for (let i = -N; i <= N; i++) {
-                        for (let j = -N; j <= N; j++) {
-                            for (let k = -N; k <= N; k++) {
-                                const neighbor = vec3.fromValues(
-                                    x + i * boundary_distance,
-                                    y + j * boundary_distance,
-                                    z + k * boundary_distance
-                                );
-                                const kernelValue = cubicSplineKernel(center, neighbor, h);
-                                gamma1 += kernelValue;
-                                kernelSum += kernelValue;
-                            }
-                        }
-                    }
-
-                    gamma1 *= Math.pow(boundary_distance, 3);
-                    boundaryParticle.mass = rho0 * gamma1 / kernelSum;
-                    window.boundary.push(boundaryParticle);
-                }
+    for (let i = -N; i <= N; i++) {
+        for (let j = -N; j <= N; j++) {
+            for (let k = -N; k <= N; k++) {
+                const neighbor = vec3.fromValues(
+                    i * boundary_distance,
+                    j * boundary_distance,
+                    k * boundary_distance
+                );
+                const kernelValue = cubicSplineKernel(center, neighbor, h);
+                gamma1 += kernelValue;
+                kernelSum += kernelValue;
             }
         }
     }
+
+    gamma1 *= Math.pow(boundary_distance, 3);
+    baseMass = rho0 * gamma1 / kernelSum;
+
+    const halfSize = window.SPH_config.container_size / 2;
+    const boundaryParticles = [];
+
+    const workerCode = `
+        onmessage = function(e) {
+            const { halfSize, boundary_distance, baseMass } = e.data;
+            const particles = [];
+            for (let x = -halfSize; x <= halfSize; x += boundary_distance) {
+                for (let y = -halfSize; y <= halfSize; y += boundary_distance) {
+                    for (let z = -halfSize; z <= halfSize; z += boundary_distance) {
+                        if (x === -halfSize || x === halfSize ||
+                            y === -halfSize || y === halfSize ||
+                            z === -halfSize || z === halfSize) {
+
+                            particles.push({ x, y, z, mass: baseMass });
+                        }
+                    }
+                }
+            }
+            postMessage(particles);
+        }
+    `;
+
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+
+    worker.onmessage = function(e) {
+        for (const { x, y, z, mass } of e.data) {
+            const boundaryParticle = new Boundary(x, y, z, mass);
+            boundaryParticles.push(boundaryParticle);
+        }
+        window.boundary = boundaryParticles;
+    };
+
+    worker.postMessage({ halfSize, boundary_distance, baseMass });
 }
 
 
@@ -304,6 +327,8 @@ function initSPH() {
     window.boundary = [];
     initMass();
     initBoundaryMasses();
+    alert("SPH mass initialized, you can expand the control panel now.");
+    
 
     const width = window.SPH_config.container_size / 2;
     const height = window.SPH_config.container_size / 4;
